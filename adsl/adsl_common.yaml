@@ -1,0 +1,102 @@
+domain: ADSL
+key: [DOMAIN, USUBJID]
+
+columns: 
+
+  - name: DOMAIN
+    label: Domain Abbreviation 
+    type: str
+    derivation:
+      constant: ADSL
+    validation:
+      maximum_missing_percentage: 0
+      allowed_values: ["ADSL"]
+    core: company-required
+
+  - name: STUDYID
+    label: Study Identifier
+    type: str
+    derivation:
+      source: DM.STUDYID
+    validation:
+      maximum_missing_percentage: 0
+    core: cdisc-required
+
+  - name: USUBJID
+    label: Unique Subject Identifier
+    type: str
+    derivation:
+        source: DM.USUBJID
+    validation:
+      maximum_missing_percentage: 0
+      unique: true
+    core: cdisc-required
+
+  - name: SUBJID
+    label: Subject Identifier for the Study
+    type: str
+    derivation:
+      source: DM.SUBJID
+    validation:
+      maximum_missing_percentage: 0
+    core: cdisc-required
+
+  - name: AGE
+    label: Age
+    type: int
+    derivation:
+      source: DM.AGE
+    validation:
+      maximum_missing_percentage: 5
+      min: 0
+      max: 120
+    core: cdisc-required
+
+  - name: AGEU
+    label: Age Units
+    type: str
+    derivation:
+      source: DM.AGEU
+    validation:
+      maximum_missing_percentage: 5
+      allowed_values: ["YEARS", "MONTHS", "WEEKS", "DAYS", "HOURS"]
+    core: cdisc-required 
+
+  - name: SEX
+    label: Sex
+    type: str
+    derivation:
+      source: DM.SEX
+    validation:
+      maximum_missing_percentage: 0
+      allowed_values: ["Male", "Female", "Unknown"]
+    core: cdisc-required
+
+  - name: WEIGHT
+    label: Weight (kg)
+    type: float
+    derivation:
+      source: VS.VSORRES
+    validation:
+      maximum_missing_percentage: 5
+    core: company-required
+
+  - name: HEIGHT
+    label: Height (cm)
+    type: float
+    derivation:
+      source: VS.VSORRES
+    validation:
+      maximum_missing_percentage: 5
+    core: company-required
+
+  - name: BMI
+    label: BMI (kg/m^2)
+    type: float
+    derivation:
+      height: HEIGHT
+      weight: WEIGHT
+      function: get_bmi
+    validation:
+      maximum_missing_percentage: 5
+    core: company-required

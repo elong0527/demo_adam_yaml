@@ -1,0 +1,10 @@
+columns: 
+
+  - name: AGE
+    validation:
+      min: 18
+      max: 80
+
+  - name: AGEU
+    validation:
+      allowed_values: ["YEARS"]

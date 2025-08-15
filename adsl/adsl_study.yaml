@@ -1,0 +1,10 @@
+columns:
+  - name: WEIGHT
+    derivation:
+      source: VS.VSORRES
+      filter: VS.TESTCD == "WEIGHT" & VS.BASEFL == True
+
+  - name: HEIGHT
+    derivation:
+      source: VS.VSORRES
+      filter: VS.TESTCD == "HEIGHT" & VS.BASEFL == True
