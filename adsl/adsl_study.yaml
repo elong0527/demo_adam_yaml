@@ -1,4 +1,9 @@
 columns:
+
+  - name: STUDYID
+    derivation:
+      constant: "study-999"
+      
   - name: WEIGHT
     derivation:
       source: VS.VSORRES
