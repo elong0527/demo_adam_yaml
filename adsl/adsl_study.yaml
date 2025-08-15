@@ -1,9 +1,13 @@
+config: 
+  - !include adsl_common.yaml
+  - !include adsl_study.yaml
+  
 columns:
 
   - name: STUDYID
     derivation:
       constant: "study-999"
-      
+
   - name: WEIGHT
     derivation:
       source: VS.VSORRES
