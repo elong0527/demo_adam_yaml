@@ -1,6 +1,6 @@
 config: 
   - !include adsl_common.yaml
-  - !include adsl_study.yaml
+  - !include adsl_project.yaml
   
 columns:
 
@@ -17,3 +17,6 @@ columns:
     derivation:
       source: VS.VSORRES
       filter: VS.TESTCD == "HEIGHT" & VS.BASEFL == True
+
+  - name: AGEU
+    drop: True
