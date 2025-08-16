@@ -35,7 +35,7 @@ def create_directories():
         logger.info(f"Created directory: {dir_path}")
 
 def download_xpt_file(url: str) -> pl.DataFrame:
-    """Download XPT file and convert to polars DataFrame"""
+    """Download XPT file and convert to polars DataFrame with all columns as strings"""
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -50,6 +50,13 @@ def download_xpt_file(url: str) -> pl.DataFrame:
             import pandas as pd
             # Use pandas to read SAS then convert to polars
             df_pandas = pd.read_sas(tmp_path, format='xport')
+            
+            # Convert all columns to string type
+            df_pandas = df_pandas.astype(str)
+            
+            # Replace 'nan' strings with empty strings for better handling
+            df_pandas = df_pandas.replace('nan', '')
+            
             df = pl.from_pandas(df_pandas)
         finally:
             # Clean up temp file
