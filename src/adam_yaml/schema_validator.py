@@ -1,8 +1,3 @@
-"""
-Schema-based validation for ADaM YAML specifications
-Updated to match the latest schema.yaml structure
-"""
-
 import re
 import yaml
 from pathlib import Path
