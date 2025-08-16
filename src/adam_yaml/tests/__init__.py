@@ -1,1 +1,0 @@
-"""Tests for adam_yaml module"""

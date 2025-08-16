@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 import tempfile
 import yaml
-from adam_yaml import AdamSpec
+from adam_spec import AdamSpec
 
 
 class TestAdamSpec(unittest.TestCase):

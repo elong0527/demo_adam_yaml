@@ -11,7 +11,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from adam_yaml import AdamSpec
+from adam_spec import AdamSpec
 
 
 class SpecLoader:

@@ -6,7 +6,7 @@ import unittest
 import tempfile
 from pathlib import Path
 import yaml
-from adam_yaml import merge_yaml
+from adam_spec import merge_yaml
 
 
 class TestMergeYaml(unittest.TestCase):

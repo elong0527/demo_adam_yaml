@@ -10,7 +10,7 @@ This project provides a Python module for handling YAML-based specifications for
 ```
 demo_adam_yaml/
 +-- src/
-|   +-- adam_yaml/           # Main Python module
+|   +-- adam_spec/           # Main specification module
 |       +-- __init__.py
 |       +-- adam_spec.py     # Core specification class
 |       +-- merge_yaml.py    # YAML merging utilities
@@ -28,7 +28,7 @@ demo_adam_yaml/
 |   +-- sdtm/               # SDTM datasets (22 files)
 |   +-- adam/               # ADaM datasets (10 files)
 +-- run_tests.py            # Test runner script
-+-- README_adam_yaml.md     # Module documentation
++-- README_adam_spec.md     # Module documentation
 +-- CODE_REVIEW.md          # Code review findings
 ```
 
@@ -66,7 +66,7 @@ demo_adam_yaml/
 
 ### Basic Usage
 ```python
-from adam_yaml import AdamSpec
+from adam_spec import AdamSpec
 
 # Load specification with schema validation
 spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
@@ -84,7 +84,7 @@ print(usubjid.label)  # "Unique Subject Identifier"
 
 ### YAML Merging
 ```python
-from adam_yaml import merge_yaml
+from adam_spec import merge_yaml
 
 # Merge multiple YAML files
 merged = merge_yaml(
@@ -96,7 +96,7 @@ merged = merge_yaml(
 
 ### Schema Validation
 ```python
-from adam_yaml import SchemaValidator
+from adam_spec import SchemaValidator
 
 validator = SchemaValidator("spec/schema.yaml")
 results = validator.validate(spec_dict)
@@ -176,7 +176,7 @@ uv sync
 uv run python run_tests.py
 
 # Test specific module
-uv run python -m unittest adam_yaml.tests.test_adam_spec
+uv run python -m unittest adam_spec.tests.test_adam_spec
 
 # Check for non-ASCII characters
 find . -name "*.py" -exec grep -l "[^\x00-\x7F]" {} \;

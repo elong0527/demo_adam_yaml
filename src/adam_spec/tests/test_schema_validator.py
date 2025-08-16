@@ -6,7 +6,7 @@ import unittest
 import tempfile
 from pathlib import Path
 import yaml
-from adam_yaml import SchemaValidator
+from adam_spec import SchemaValidator
 
 
 class TestSchemaValidator(unittest.TestCase):
