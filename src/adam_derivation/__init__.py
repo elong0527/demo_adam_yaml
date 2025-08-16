@@ -5,7 +5,7 @@ A modular framework for deriving ADaM datasets from SDTM data using YAML specifi
 Follows CDISC ADaM standards and supports configuration-driven derivations.
 """
 
-from .engine import DerivationEngine
+from .engine import AdamDerivation
 
 __version__ = "0.1.0"
-__all__ = ["DerivationEngine"]
+__all__ = ["AdamDerivation"]

@@ -18,7 +18,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from adam_validation import DataValidator
 
 
-class DerivationEngine:
+class AdamDerivation:
     """
     Main engine for deriving ADaM datasets from SDTM data using YAML specifications
     """
