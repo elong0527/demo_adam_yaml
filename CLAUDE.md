@@ -28,7 +28,7 @@ demo_adam_yaml/
 - **Polars**: High-performance dataframe library for data manipulation
 - **Parquet**: Columnar storage format for efficient data storage
 - **YAML**: Human-readable configuration for ADaM specifications
-- **uv**: Fast Python package manager and virtual environment tool
+- **uv**: Fast Python package manager with built-in virtual environment management (uv sync)
 
 ## Data Sources
 - CDISC Pilot Study data from: https://github.com/cdisc-org/sdtm-adam-pilot-project
@@ -37,15 +37,17 @@ demo_adam_yaml/
 
 ## Development Setup
 ```bash
-# Create virtual environment with uv
-uv venv
-source .venv/bin/activate
+# Install dependencies with uv sync
+uv sync
 
-# Install dependencies
-uv pip install -r script/requirements.txt
+# Run commands with uv
+uv run python example.py
+
+# Run tests
+uv run pytest
 
 # Download and prepare data (if needed)
-python script/prepare_data.py
+uv run python script/prepare_data.py
 ```
 
 ## YAML Specification Design
