@@ -9,10 +9,13 @@ from pathlib import Path
 # Add src to path for development
 sys.path.insert(0, 'src')
 
-from adam_yaml import ADaMYAMLHandler
+from adam_yaml import AdamSpec
 
-handler = ADaMYAMLHandler(spec_dir=Path("spec"))
-    
-errors = handler.validate_spec(spec)
-      
-table_output = handler.display_spec(spec, format="table")
+# create spec without schema validation 
+adsl_spec = AdamSpec("spec/adsl_study.yaml")
+
+# create spec with schema validation
+adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
+
+# store the combined YAML file
+adsl_spec.save("spec/adsl_study_combined.yaml")

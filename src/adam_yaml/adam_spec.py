@@ -60,19 +60,17 @@ class AdamSpec:
         validation_errors: List of validation errors if any
     """
     
-    def __init__(self, path: Union[str, Path], validate: bool = True, 
-                 schema_path: Optional[Union[str, Path]] = None):
+    def __init__(self, path: Union[str, Path], schema_path: Optional[Union[str, Path]] = None):
         """
         Initialize and build complete specification from YAML file
         
         Args:
             path: Path to the study YAML file
-            validate: Whether to validate the specification (default: True)
             schema_path: Optional path to schema file for validation
             
         Raises:
             FileNotFoundError: If YAML file or parent files not found
-            ValueError: If validation fails and validate=True
+            ValueError: If YAML is invalid
         """
         self.path = Path(path)
         self.schema_path = Path(schema_path) if schema_path else None
@@ -85,24 +83,16 @@ class AdamSpec:
         self._raw_spec: Dict = {}
         self._schema_results: List[ValidationResult] = []
         
-        # Build and optionally validate
+        # Build specification
         self._build_spec()
         
-        if validate:
-            # Use schema validation if path provided
-            if self.schema_path:
-                self._validate_with_schema()
-            else:
-                # Basic validation inline
-                if not self.domain:
-                    self._errors.append("Domain is required")
-                if not self.columns:
-                    self._errors.append("No columns defined")
-            
+        # Validate if schema provided, otherwise warn
+        if self.schema_path:
+            self._validate_with_schema()
             if self._errors:
-                error_msg = f"Validation errors: {self._errors}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
+                logger.warning(f"Validation found {len(self._errors)} errors")
+        else:
+            logger.warning(f"No schema_path provided for {self.path.name} - validation skipped")
     
     def _build_spec(self) -> None:
         """Build complete specification with inheritance"""
