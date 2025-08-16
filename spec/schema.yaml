@@ -1,0 +1,154 @@
+# ADaM YAML Specification Schema
+# Defines validation rules for ADaM specification files
+
+# Root level fields
+root:
+  required:
+    - domain
+    - columns
+  optional:
+    - key
+    - parents
+    - description
+    - version
+    - metadata
+  
+# Root field specific rules
+fields:
+  domain:
+    type: str
+    pattern: "^AD[A-Z0-9]{0,6}$"  # Must start with "AD", up to 8 chars total
+    description: "ADaM dataset domain name (e.g., ADSL, ADAE)"
+    
+  key:
+    type: list
+    item_type: str
+    min_items: 1
+    max_items: 5
+    description: "List of unique row identifier variables for the dataset"
+    
+  parents:
+    type: list
+    item_type: str
+    description: "List of parent YAML files to inherit from"
+    
+  description:
+    type: str
+    max_length: 200
+    description: "Dataset description"
+    
+  version:
+    type: str
+    pattern: "^\\d+\\.\\d+(\\.\\d+)?$"
+    description: "Specification version"
+    
+  metadata:
+    type: dict
+    description: "Additional metadata"
+    
+  columns:
+    type: list
+    required: true
+    min_items: 1
+    item_type: dict
+    description: "List of column specifications"
+
+# Column-level rules
+column:
+  required:
+    - name
+    - type
+    - derivation
+  optional:
+    - label
+    - core
+    - validation
+    - drop
+    - length
+    - format
+    - codelist
+    
+  fields:
+    name:
+      type: str
+      pattern: "^[A-Z][A-Z0-9_]{0,7}$"  # Up to 8 chars, uppercase
+      description: "Column name (max 8 characters)"
+      
+    type:
+      type: str
+      allowed_values:
+        - str
+        - int
+        - float
+        - date
+        - datetime
+        - bool
+      description: "Data type"
+      
+    label:
+      type: str
+      max_length: 200
+      description: "Column label/description"
+      
+    core:
+      type: str
+      allowed_values:
+        - cdisc-required
+        - company-required
+        - optional
+        - conditional
+      description: "CDISC core designation"
+      
+    codelist:
+      type: str
+      description: "Reference to controlled terminology"
+      
+    drop:
+      type: bool
+      description: "Flag to drop inherited column"
+      
+    derivation:
+      type: dict
+      fields:
+        source:
+          type: str
+          description: "Source variable(s)"
+        function:
+          type: str
+          description: "Derivation function"
+        constant:
+          type: str
+          description: "Constant value"
+        filter:
+          type: str
+          description: "Filter condition"
+          
+    validation:
+      type: dict
+      fields:
+        unique:
+          type: bool
+          description: "Must values be unique"
+        min:
+          type: [int, float]
+          description: "Minimum value"
+        max:
+          type: [int, float]
+          description: "Maximum value"
+        min_length:
+          type: int
+          description: "Minimum string length"
+        max_length:
+          type: int
+          description: "Maximum string length"
+        allowed_values:
+          type: list
+          description: "List of allowed values"
+        pattern:
+          type: str
+          description: "Regex pattern for validation"
+        maximum_missing_percentage:
+          type: float
+          min: 0
+          max: 100
+          description: "Maximum allowed missing percentage"
