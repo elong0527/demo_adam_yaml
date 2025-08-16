@@ -8,15 +8,25 @@ columns:
     derivation:
       constant: "study-999"
 
+  - name: TRTSDT
+    derivation: 
+      source: DM.RFSTDTC
+  
   - name: WEIGHT
     derivation:
       source: VS.VSORRES
-      filter: VS.TESTCD == "WEIGHT" & VS.BASEFL == True
+      filter: VS.TESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
+      aggregation: 
+        function: closet
+        target: DM.RFSTDTC
 
   - name: HEIGHT
     derivation:
       source: VS.VSORRES
-      filter: VS.TESTCD == "HEIGHT" & VS.BASEFL == True
+      filter: VS.TESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
+      aggregation: 
+        function: closet
+        target: DM.RFSTDTC
 
   - name: AGEU
     drop: True

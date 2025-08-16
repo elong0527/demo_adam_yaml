@@ -11,7 +11,7 @@ columns:
     validation:
       maximum_missing_percentage: 0
       allowed_values: ["ADSL"]
-    core: company-required
+    core: org-required
 
   - name: STUDYID
     label: Study Identifier
@@ -40,6 +40,13 @@ columns:
     validation:
       maximum_missing_percentage: 0
     core: cdisc-required
+
+  - name: TRTSDT
+    label: Date of First Exposure to Treatment
+    type: str
+    validation:
+      format: date
+    core: org-required
 
   - name: AGE
     label: Age
@@ -79,7 +86,7 @@ columns:
       source: VS.VSORRES
     validation:
       maximum_missing_percentage: 5
-    core: company-required
+    core: org-required
 
   - name: HEIGHT
     label: Height (cm)
@@ -88,7 +95,7 @@ columns:
       source: VS.VSORRES
     validation:
       maximum_missing_percentage: 5
-    core: company-required
+    core: org-required
 
   - name: BMI
     label: BMI (kg/m^2)
@@ -99,4 +106,4 @@ columns:
       weight: WEIGHT
     validation:
       maximum_missing_percentage: 5
-    core: company-required
+    core: org-required
