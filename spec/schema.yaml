@@ -6,6 +6,8 @@ root:
   required:
     - domain
     - columns
+    - sdtm_dir
+    - schema
   optional:
     - key
     - parents
@@ -45,6 +47,14 @@ fields:
   metadata:
     type: dict
     description: "Additional metadata"
+    
+  sdtm_dir:
+    type: str
+    description: "Path to SDTM data directory (relative to spec file or absolute)"
+    
+  schema:
+    type: str
+    description: "Path to schema file for validation (relative to spec file)"
     
   columns:
     type: list

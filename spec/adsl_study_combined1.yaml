@@ -119,3 +119,4 @@ columns:
     weight: WEIGHT
   validation:
     maximum_missing_percentage: 5
+sdtm_dir: ../data/sdtm

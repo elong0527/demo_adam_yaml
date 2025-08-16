@@ -1,6 +1,8 @@
 parents: 
   - adsl_common.yaml
   - adsl_project.yaml
+
+sdtm_dir: "../data/sdtm"
   
 columns:
 

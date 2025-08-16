@@ -125,3 +125,18 @@ class SpecLoader:
         """
         cols = self._spec.get("columns", [])
         return [col.get("name") for col in cols if "name" in col]
+    
+    @property
+    def sdtm_dir(self) -> Optional[str]:
+        """
+        Get SDTM directory path from specification
+        
+        Returns:
+            Path to SDTM directory if specified, None otherwise
+        """
+        sdtm_path = self._spec.get("sdtm_dir")
+        if sdtm_path:
+            # Resolve relative paths relative to spec file directory
+            if not Path(sdtm_path).is_absolute():
+                sdtm_path = str(self.spec_path.parent / sdtm_path)
+        return sdtm_path
