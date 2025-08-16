@@ -94,9 +94,9 @@ columns:
     label: BMI (kg/m^2)
     type: float
     derivation:
+      function: get_bmi
       height: HEIGHT
       weight: WEIGHT
-      function: get_bmi
     validation:
       maximum_missing_percentage: 5
     core: company-required
