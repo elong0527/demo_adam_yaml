@@ -57,3 +57,28 @@ adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
 # store the combined YAML file
 adsl_spec.save("spec/adsl_study_combined.yaml")
 ```
+
+# ADSL Variable Derivation Methods 
+
+## Method 1: constant 
+   - apply **constant** to all values 
+
+## Method 2: source  
+    - apply **filter** if exists
+    - apply **source** using **key** for row identifier 
+    - validate **source** has one and only one value per unique **key** value 
+
+## Method 3: source then apply mapping 
+    - apply **filter** if exists
+    - apply **source** using **key** for row identifier 
+    - mapping values based on **mapping** 
+    - validate **source** has one and only one value per unique **key** value 
+
+## Method 4: source then apply aggregation 
+    - apply **filter** if exists 
+    - apply **source** using **key** for row identifier 
+    - aggregate values based on specified function and its argument
+    - validate **source** has one and only one value per unique **key** value 
+
+## Method 5: general function with arguments
+    - apply general function with arguments

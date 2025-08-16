@@ -8,6 +8,14 @@ columns:
     derivation:
       constant: "study-999"
 
+  - name: SEX
+    derivation: 
+      source: DM.SEX 
+      mapping:
+        F: Female
+        M: Male
+        "": Null 
+        
   - name: TRTSDT
     derivation: 
       source: DM.RFSTDTC
