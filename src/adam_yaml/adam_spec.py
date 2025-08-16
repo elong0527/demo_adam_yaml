@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 class Column:
     """ADaM column specification"""
     name: str
+    type: str
     label: Optional[str] = None
-    type: Optional[str] = None
     core: Optional[str] = None
     derivation: Optional[Dict[str, Any]] = None
     validation: Optional[Dict[str, Any]] = None
@@ -53,18 +53,21 @@ class AdamSpec:
             path: Path to the study YAML file
         """
         self.path = Path(path)
-        self.domain: str = "ADSL"
+        self.domain: str = ""  
         self.key: List[str] = []
         self.columns: List[Column] = []
         self.parents: List[str] = []
         self._errors: List[str] = []
+        self._raw_spec: Dict = {}
         
         # Build, merge, and validate at initialization
         self._build_spec()
         self._validate()
         
         if self._errors:
-            logger.warning(f"Validation errors: {self._errors}")
+            error_msg = f"Validation errors: {self._errors}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
     
     def _load_yaml(self, filepath: Path) -> Dict:
         """Load YAML file"""
@@ -92,35 +95,59 @@ class AdamSpec:
                     parent_spec = self._load_yaml(parent_path)
                     final_spec = self._merge_specs(final_spec, parent_spec)
                 else:
-                    logger.warning(f"Parent file not found: {parent_path}")
+                    error_msg = f"Parent file not found: {parent_path}"
+                    logger.error(error_msg)
+                    raise FileNotFoundError(error_msg)
         
         # Merge study-specific overrides
         final_spec = self._merge_specs(final_spec, study_spec)
         
-        # Set attributes from merged spec
-        self.domain = final_spec.get('domain', [])
+        # Store the full merged spec for access to all fields
+        self._raw_spec = final_spec
+        
+        # Set standard attributes from merged spec
+        self.domain = final_spec.get('domain', '')  # Required, empty string if missing
         self.key = final_spec.get('key', [])
         
         # Process columns
         columns = []
         for col_dict in final_spec.get('columns', []):
             if not col_dict.get('drop', False):
+                # Set label = name if label is None
+                if 'label' not in col_dict or col_dict['label'] is None:
+                    col_dict['label'] = col_dict['name']
+                # Ensure type is present
+                if 'type' not in col_dict:
+                    self._errors.append(f"Column {col_dict['name']} is missing required 'type' field")
+                    continue  # Skip this column to avoid error in Column constructor
                 columns.append(Column(**{k: v for k, v in col_dict.items() if k != 'drop'}))
         self.columns = columns
+        
+        # Store any additional fields as attributes
+        # Dynamically determine standard fields based on Column dataclass attributes
+        column_attrs = set(Column.__dataclass_fields__.keys())
+        # Standard spec-level fields that shouldn't be set as attributes
+        spec_standard_fields = {'domain', 'key', 'columns', 'parents'}
+        for field, value in final_spec.items():
+            if field not in spec_standard_fields:
+                setattr(self, field, value)
     
     def _merge_specs(self, base: Dict, override: Dict) -> Dict:
-        """Merge two specifications with deep merging"""
+        """Merge two specifications with deep merging for ALL fields"""
         result = deepcopy(base)
         
-        # Merge simple fields
-        for field in ['domain', 'key', 'parents']:
-            if field in override:
-                result[field] = override[field]
-        
-        # Merge columns with special logic
-        if 'columns' in override:
-            base_columns = result.get('columns', [])
-            result['columns'] = self._merge_columns(base_columns, override['columns'])
+        # Merge all fields from override
+        for field, value in override.items():
+            if field == 'columns':
+                # Special handling for columns (support drop flag)
+                base_columns = result.get('columns', [])
+                result['columns'] = self._merge_columns(base_columns, value)
+            elif field in result:
+                # Deep merge if field exists in base
+                result[field] = self._deep_merge(result[field], value)
+            else:
+                # Add new field
+                result[field] = deepcopy(value)
         
         return result
     
@@ -166,7 +193,8 @@ class AdamSpec:
     
     def _validate(self):
         """Validate specification and populate _errors list"""
-        self._errors = []
+        # Don't reset errors - keep any errors from build_spec
+        # self._errors = []  # Comment out to preserve build errors
         
         # Check required fields
         if not self.domain:
@@ -182,8 +210,11 @@ class AdamSpec:
                 self._errors.append(f"Duplicate column name: {col.name}")
             column_names.add(col.name)
             
+            # Type is required
+            if not col.type:
+                self._errors.append(f"Column {col.name} is missing required 'type' field")
             # Basic type validation
-            if col.type and col.type not in ['str', 'int', 'float', 'date', 'datetime', 'bool']:
+            elif col.type not in ['str', 'int', 'float', 'date', 'datetime', 'bool']:
                 self._errors.append(f"Invalid data type for {col.name}: {col.type}")
             
             # Core type validation
@@ -212,14 +243,18 @@ class AdamSpec:
         return self._errors
     
     def to_dict(self) -> Dict:
-        """Convert to dictionary format"""
-        result = {
-            "domain": self.domain,
-            "key": self.key,
-            "columns": [col.to_dict() for col in self.columns]
-        }
-        if self.parents:
-            result["parents"] = self.parents
+        """Convert to dictionary format including all inherited fields"""
+        # Start with all fields from the raw spec
+        result = deepcopy(self._raw_spec)
+        
+        # Update with current values of standard fields
+        result["domain"] = self.domain
+        result["key"] = self.key
+        result["columns"] = [col.to_dict() for col in self.columns]
+        
+        # Remove parents from output (it's metadata)
+        result.pop('parents', None)
+        
         return result
     
     def to_yaml(self) -> str:
@@ -228,12 +263,6 @@ class AdamSpec:
         # Remove parents from output (it's metadata)
         spec_dict.pop('parents', None)
         return yaml.dump(spec_dict, default_flow_style=False, sort_keys=False)
-    
-    def to_json(self) -> str:
-        """Convert to JSON string"""
-        spec_dict = self.to_dict()
-        spec_dict.pop('parents', None)
-        return json.dumps(spec_dict, indent=2)
     
     def to_table(self) -> str:
         """Convert to table format"""
