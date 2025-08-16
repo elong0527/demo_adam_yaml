@@ -2,6 +2,7 @@ domain: ADSL
 key:
 - DOMAIN
 - USUBJID
+schema: schema.yaml
 columns:
 - name: DOMAIN
   type: str

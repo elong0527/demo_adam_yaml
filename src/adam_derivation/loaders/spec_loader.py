@@ -42,6 +42,7 @@ class SpecLoader:
             Complete merged specification dictionary
         """
         # Use AdamSpec for loading and merging
+        # AdamSpec will automatically find schema from the spec if not provided
         adam_spec = AdamSpec(
             str(self.spec_path),
             schema_path=str(self.schema_path) if self.schema_path else None

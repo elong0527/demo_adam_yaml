@@ -2,6 +2,7 @@ domain: ADSL
 key:
 - DOMAIN
 - USUBJID
+schema: schema.yaml
 columns:
 - name: DOMAIN
   type: str
@@ -19,7 +20,7 @@ columns:
   core: cdisc-required
   derivation:
     source: DM.STUDYID
-    constant: study-999
+    constant: CDISCPILOT01
   validation:
     maximum_missing_percentage: 0
 - name: USUBJID

@@ -67,6 +67,7 @@ class AdamSpec:
         Args:
             path: Path to the study YAML file
             schema_path: Optional path to schema file for validation
+                        If not provided, will look for 'schema' field in the YAML spec
             
         Raises:
             FileNotFoundError: If YAML file or parent files not found
@@ -86,13 +87,22 @@ class AdamSpec:
         # Build specification
         self._build_spec()
         
-        # Validate if schema provided, otherwise warn
+        # Try to find schema path from spec if not provided
+        if not self.schema_path and 'schema' in self._raw_spec:
+            schema_from_spec = self._raw_spec['schema']
+            # Resolve relative to the spec file's directory
+            potential_schema_path = self.path.parent / schema_from_spec
+            if potential_schema_path.exists():
+                self.schema_path = potential_schema_path
+                logger.info(f"Using schema from specification: {schema_from_spec}")
+        
+        # Validate if schema available
         if self.schema_path:
             self._validate_with_schema()
             if self._errors:
                 logger.warning(f"Validation found {len(self._errors)} errors")
         else:
-            logger.warning(f"No schema_path provided for {self.path.name} - validation skipped")
+            logger.warning(f"No schema found for {self.path.name} - validation skipped")
     
     def _build_spec(self) -> None:
         """Build complete specification with inheritance"""
