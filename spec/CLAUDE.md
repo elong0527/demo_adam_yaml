@@ -45,3 +45,15 @@ Each column in the YAML files includes:
 - Column names: uppercase, max 8 characters
 - Required fields: domain, columns, column.name, column.type
 
+## Update final spec 
+
+```python
+# create spec without schema validation 
+adsl_spec = AdamSpec("spec/adsl_study.yaml")
+
+# create spec with schema validation
+adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
+
+# store the combined YAML file
+adsl_spec.save("spec/adsl_study_combined.yaml")
+```
