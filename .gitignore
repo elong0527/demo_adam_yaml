@@ -1,2 +1,6 @@
 ADaM_v2.1/
 ADaMIG/
+.venv/
+venv/
+__pycache__/
+*.pyc
