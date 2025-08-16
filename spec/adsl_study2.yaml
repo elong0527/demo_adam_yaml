@@ -1,0 +1,18 @@
+parents: 
+  - adsl_common.yaml
+  - adsl_project.yaml
+  
+columns:
+
+  - name: STUDYID
+    derivation:
+      constant: "study-993"
+
+  - name: AGEGRP1
+    derivation:
+    source: AGE
+    cut:
+      "<18": "< 18"
+      ">=18 and <30": ">= 18 & <30"
+      ">=30 and <65": ">= 30 & <65"
+      ">=65": ">= 65"

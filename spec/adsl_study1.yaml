@@ -1,0 +1,12 @@
+parents: 
+  - adsl_common.yaml
+  - adsl_project.yaml
+  
+columns:
+
+  - name: STUDYID
+    derivation:
+      constant: "study-999"
+
+  - name: AGEGRP1
+    drop: True

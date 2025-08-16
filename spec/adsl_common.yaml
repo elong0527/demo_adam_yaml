@@ -59,6 +59,19 @@ columns:
       max: 120
     core: cdisc-required
 
+  - name: AGEGRP1
+    label: Age Group
+    type: str
+    derivation:
+      source: AGE
+      cut:
+        "<18": "< 18"
+        ">=18 and <65": ">= 18 & <65"
+        ">=65": ">= 65"
+    validation:
+      maximum_missing_percentage: 5
+    core: optional
+
   - name: AGEU
     label: Age Units
     type: str

@@ -8,3 +8,31 @@ columns:
   - name: AGEU
     validation:
       allowed_values: ["YEARS"]
+
+  - name: SEX
+    derivation: 
+      source: DM.SEX 
+      mapping:
+        F: Female
+        M: Male
+        "": Null 
+        
+  - name: TRTSDT
+    derivation: 
+      source: DM.RFSTDTC
+  
+  - name: WEIGHT
+    derivation:
+      source: VS.VSORRES
+      filter: VS.TESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
+      aggregation: 
+        function: closet
+        target: DM.RFSTDTC
+
+  - name: HEIGHT
+    derivation:
+      source: VS.VSORRES
+      filter: VS.TESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
+      aggregation: 
+        function: closet
+        target: DM.RFSTDTC

@@ -48,37 +48,71 @@ Each column in the YAML files includes:
 ## Update final spec 
 
 ```python
-# create spec without schema validation 
-adsl_spec = AdamSpec("spec/adsl_study.yaml")
-
 # create spec with schema validation
-adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
+adsl_spec1 = AdamSpec("spec/adsl_study1.yaml", schema_path="spec/schema.yaml")
+adsl_spec2 = AdamSpec("spec/adsl_study2.yaml", schema_path="spec/schema.yaml")
 
 # store the combined YAML file
-adsl_spec.save("spec/adsl_study_combined.yaml")
+adsl_spec1.save("spec/adsl_study_combined1.yaml")
+adsl_spec2.save("spec/adsl_study_combined2.yaml")
 ```
 
-# ADSL Variable Derivation Methods 
+# ADaM Variable Derivation Methods
 
-## Method 1: constant 
-   - apply **constant** to all values 
+## Assumptions
 
-## Method 2: source  
-    - apply **filter** if exists
-    - apply **source** using **key** for row identifier 
-    - validate **source** has one and only one value per unique **key** value 
+- XX.YYYY are variables from a SDTM.XX or ADaM.XX dataset YYYY variable.
+- YYYY are variables from current dataset. 
+- date and time imputation following pre-specified business rule. 
+- tie breaker following pre-specified business rule.
 
-## Method 3: source then apply mapping 
-    - apply **filter** if exists
-    - apply **source** using **key** for row identifier 
-    - mapping values based on **mapping** 
-    - validate **source** has one and only one value per unique **key** value 
+## Core Derivation Patterns
 
-## Method 4: source then apply aggregation 
-    - apply **filter** if exists 
-    - apply **source** using **key** for row identifier 
-    - aggregate values based on specified function and its argument
-    - validate **source** has one and only one value per unique **key** value 
+### Method 1: Constant Assignment
+**Use Case**: Fixed values across all records (e.g., STUDYID, DOMAIN)
+- Apply **constant** value to all records
+- No validation required
+- Example: `STUDYID = "CDISCPILOT01"`
 
-## Method 5: general function with arguments
-    - apply general function with arguments
+### Method 2: Direct Source Mapping  
+**Use Case**: One-to-one variable mapping from SDTM
+- Apply **filter** conditions if specified
+- Map **source** variable using subject **key** for row matching
+- Validate exactly one source value per subject
+- Example: `AGE from DM.AGE`
+
+### Method 3: Source with Value Recoding
+**Use Case**: Variable mapping with value transformation
+- Apply **filter** conditions if specified
+- Map **source** variable using subject **key**
+- Apply **mapping** dictionary for value recoding
+- Handle unmapped values (null, default, error)
+- Validate exactly one source value per subject
+- Example: `SEX from DM.SEX with F->Female, M->Male`
+
+### Method 4: Source with Aggregation
+**Use Case**: Summarizing multiple records per subject
+- Apply **filter** conditions if specified
+- Group records by subject **key**
+- Apply **aggregation** function:
+  - Statistical: mean, median, min, max, sum, count
+  - Temporal: first, last, closest (to reference date)
+  - Custom: user-defined functions
+- Handle missing/partial data per rules
+- Example: `WEIGHT from VS where VSTESTCD="WEIGHT" that before and closet to start date`
+
+### Method 6: Conditional/Derived Logic
+**Use Case**: Complex business rules and calculations
+- Apply **filter** conditions if specified
+- Group records by subject **key**
+- Apply **cut** to break a numeric value into ordered group.
+- Example: `AGEGR1 based on AGE ranges`
+
+### Method 7: Custom Function Application
+**Use Case**: Study-specific complex algorithms
+- Apply custom **function** with **arguments**
+- Support external function libraries
+- Pass multiple input variables
+- Handle function errors gracefully
+- Document function specifications
+- Example: `BMI derivation using HEIGHT and WEIGHT`
