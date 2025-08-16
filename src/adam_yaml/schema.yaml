@@ -99,37 +99,7 @@ definitions:
       function:
         type: string
         description: Function name to apply
-        
-      height:
-        type: string
-        description: Height variable for BMI calculation
-        
-      weight:
-        type: string
-        description: Weight variable for BMI calculation
-        
-      join:
-        type: object
-        description: Join specification
-        properties:
-          dataset:
-            type: string
-          on:
-            type: array
-            items:
-              type: string
-          type:
-            type: string
-            enum:
-              - left
-              - right
-              - inner
-              - outer
-              
-      expression:
-        type: string
-        description: Python expression for derivation
-        
+ 
   validation:
     type: object
     description: Validation rules for the variable
@@ -156,22 +126,3 @@ definitions:
       unique:
         type: boolean
         description: Values must be unique
-        
-      pattern:
-        type: string
-        description: Regular expression pattern
-        
-      not_null:
-        type: boolean
-        description: Value cannot be null
-        
-      length:
-        type: object
-        description: String length constraints
-        properties:
-          min:
-            type: integer
-            minimum: 0
-          max:
-            type: integer
-            minimum: 0
