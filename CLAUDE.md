@@ -4,93 +4,220 @@
 - **Use ASCII characters only** - No emojis or special Unicode characters in code or commits
 
 ## Project Overview
-This project demonstrates the use of YAML-based specifications for defining ADaM (Analysis Data Model) datasets in clinical trials, following CDISC standards.
+This project provides a Python module for handling YAML-based specifications for ADaM (Analysis Data Model) datasets in clinical trials, following CDISC standards.
 
 ## Project Structure
 ```
 demo_adam_yaml/
-├── data/                  # CDISC pilot study data in parquet format
-│   ├── sdtm/             # SDTM datasets (22 files)
-│   └── adam/             # ADaM datasets (10 files)
-├── spec/                  # YAML specifications for ADaM datasets
-│   ├── adsl_common.yaml  # Common variables across studies
-│   ├── adsl_project.yaml # Project-level specifications
-│   └── adsl_study.yaml   # Study-specific specifications
-├── script/                # Data preparation scripts
-│   ├── prepare_data.py   # Downloads and converts CDISC pilot data
-│   └── requirements.txt  # Python dependencies
-├── ADaM_v2.1/            # ADaM v2.1 documentation (gitignored)
-└── ADaMIG/               # ADaM Implementation Guide (gitignored)
++-- src/
+|   +-- adam_yaml/           # Main Python module
+|       +-- __init__.py
+|       +-- adam_spec.py     # Core specification class
+|       +-- merge_yaml.py    # YAML merging utilities
+|       +-- schema_validator.py  # Schema validation
+|       +-- tests/           # Unit tests
+|           +-- test_adam_spec.py
+|           +-- test_merge_yaml.py
+|           +-- test_schema_validator.py
++-- spec/                    # YAML specifications
+|   +-- adsl_common.yaml    # Common variables
+|   +-- adsl_project.yaml   # Project-level specs
+|   +-- adsl_study.yaml     # Study-specific specs
+|   +-- schema.yaml         # Validation schema
++-- data/                    # CDISC pilot study data
+|   +-- sdtm/               # SDTM datasets (22 files)
+|   +-- adam/               # ADaM datasets (10 files)
++-- run_tests.py            # Test runner script
++-- README_adam_yaml.md     # Module documentation
++-- CODE_REVIEW.md          # Code review findings
 ```
 
 ## Key Technologies
-- **Python**: Data processing and transformation
-- **Polars**: High-performance dataframe library for data manipulation
-- **Parquet**: Columnar storage format for efficient data storage
-- **YAML**: Human-readable configuration for ADaM specifications
-- **uv**: Fast Python package manager with built-in virtual environment management (uv sync)
+- **Python 3.7+**: Core programming language
+- **PyYAML**: YAML parsing and generation
+- **Pathlib**: Modern path handling
+- **Dataclasses**: Structured data representation
+- **Type hints**: Static type checking support
+- **unittest**: Built-in testing framework
 
-## Data Sources
-- CDISC Pilot Study data from: https://github.com/cdisc-org/sdtm-adam-pilot-project
-- SDTM datasets: 22 domains including AE, CM, DM, LB, VS, etc.
-- ADaM datasets: 10 analysis datasets including ADSL, ADAE, ADVS, etc.
+## Module Features
 
-## Development Setup
-```bash
-# Install dependencies with uv sync
-uv sync
+### 1. AdamSpec Class
+- Load and merge hierarchical YAML specifications
+- Automatic parent file inheritance
+- Schema-based validation
+- Multiple export formats (YAML, JSON, dict)
+- Column management and access methods
 
-# Run commands with uv
-uv run python example.py
+### 2. merge_yaml Function
+- General-purpose YAML merging
+- Multiple merge strategies (replace, append, merge_by_key)
+- Deep merging support
+- Column-specific merge handling
 
-# Run tests
-uv run pytest
+### 3. SchemaValidator Class
+- Pattern-based validation (regex)
+- Type checking
+- Required field validation
+- Cross-field validation rules
+- Detailed error reporting
 
-# Download and prepare data (if needed)
-uv run python script/prepare_data.py
+## Usage Examples
+
+### Basic Usage
+```python
+from adam_yaml import AdamSpec
+
+# Load specification with schema validation
+spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
+
+# Access specification data
+print(spec.domain)  # "ADSL"
+print(spec.key)     # ['DOMAIN', 'USUBJID']
+print(len(spec.columns))  # Number of columns
+
+# Get specific column
+usubjid = spec.get_column("USUBJID")
+print(usubjid.type)   # "str"
+print(usubjid.label)  # "Unique Subject Identifier"
 ```
 
-## YAML Specification Design
-The YAML specifications follow a hierarchical inheritance model:
+### YAML Merging
+```python
+from adam_yaml import merge_yaml
+
+# Merge multiple YAML files
+merged = merge_yaml(
+    paths=["base.yaml", "override.yaml"],
+    list_merge_strategy="merge_by_key",
+    list_merge_keys={"columns": "name"}
+)
+```
+
+### Schema Validation
+```python
+from adam_yaml import SchemaValidator
+
+validator = SchemaValidator("spec/schema.yaml")
+results = validator.validate(spec_dict)
+
+if validator.is_valid():
+    print("Specification is valid")
+else:
+    for error in validator.get_errors():
+        print(f"ERROR: {error.message}")
+```
+
+## YAML Specification Structure
+
+### Inheritance Model
 1. **adsl_common.yaml**: Base template with common variables
 2. **adsl_project.yaml**: Project-level specifications (inherits from common)
 3. **adsl_study.yaml**: Study-specific specifications (inherits from project)
 
-Each specification can:
-- Inherit from parent configurations using `config` field
-- Override inherited variables
-- Add new study/project-specific variables
+### Example Specification
+```yaml
+parents:
+  - adsl_common.yaml
+  - adsl_project.yaml
 
-## Testing and Validation Commands
+domain: ADSL
+key: [DOMAIN, USUBJID]
+
+columns:
+  - name: USUBJID
+    type: str
+    label: Unique Subject Identifier
+    core: cdisc-required
+    derivation:
+      source: DM.USUBJID
+```
+
+## Schema Rules
+
+### Domain Naming
+- Must start with "AD" prefix
+- Maximum 8 characters
+- Pattern: `^AD[A-Z0-9]{0,6}$`
+
+### Column Naming
+- Uppercase letters, numbers, underscore
+- Maximum 8 characters
+- Pattern: `^[A-Z][A-Z0-9_]{0,7}$`
+
+### Required Fields
+- Domain name
+- Column specifications
+- Column name, type, and derivation
+
+## Testing
+
+### Run All Tests
 ```bash
-# Lint Python code (if configured)
-# npm run lint or ruff check
+# From project root
+uv run python run_tests.py
 
-# Type checking (if configured)  
-# npm run typecheck or mypy
+# Or using unittest
+uv run python -m unittest discover -s src/adam_yaml/tests
+```
 
-# Run tests (if configured)
-# pytest
+### Test Coverage
+- AdamSpec: 7 tests (loading, inheritance, validation, export)
+- merge_yaml: 5 tests (strategies, edge cases)
+- SchemaValidator: 6 tests (validation rules, patterns)
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run tests
+uv run python run_tests.py
+
+# Test specific module
+uv run python -m unittest adam_yaml.tests.test_adam_spec
+
+# Check for non-ASCII characters
+find . -name "*.py" -exec grep -l "[^\x00-\x7F]" {} \;
 ```
 
 ## Important Notes
-- All data files are stored in parquet format for efficient storage and processing
-- The project uses CDISC pilot study data for demonstration purposes
-- YAML specifications support inheritance for DRY (Don't Repeat Yourself) principle
-- Virtual environment should be activated before running any Python scripts
 
-## Next Steps and TODOs
-- [ ] Implement YAML parser to read and validate specifications
-- [ ] Create ADaM dataset generator from YAML specifications
-- [ ] Add validation against ADaM conformance rules
-- [ ] Generate define.xml from YAML specifications
-- [ ] Add comprehensive test suite
-- [ ] Create documentation for YAML specification format
+### ASCII-Only Policy
+- All code uses ASCII characters only
+- No emojis in code, comments, or commits
+- Use [OK], [FAIL], [X], [!], [i] for status indicators
+- Use +-- and | for tree structures
 
-## Common Tasks
-1. **Update data**: Run `python script/prepare_data.py`
-2. **Add new YAML spec**: Create in `spec/` directory following inheritance model
-3. **Test changes**: Ensure virtual environment is active and run validation scripts
+### Error Handling
+- FileNotFoundError for missing files
+- ValueError for invalid YAML
+- Detailed validation error messages
+- Warning logs for skipped validation
+
+### Best Practices
+- Always provide schema_path for validation
+- Use hierarchical YAML structure for DRY principle
+- Follow CDISC naming conventions
+- Test all changes with unit tests
+
+## API Summary
+
+### Classes
+- **AdamSpec**: Main specification handler
+- **Column**: Column specification dataclass
+- **SchemaValidator**: Schema-based validator
+- **ValidationResult**: Validation result dataclass
+
+### Functions
+- **merge_yaml()**: Merge multiple YAML files with strategies
+
+### Properties
+- **spec.domain**: Dataset domain name
+- **spec.columns**: List of Column objects
+- **spec.validation_errors**: List of validation errors
+- **spec.is_valid**: Boolean validation status
 
 ## References
 - [CDISC ADaM v2.1](https://www.cdisc.org/standards/foundational/adam)
