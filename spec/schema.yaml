@@ -94,7 +94,7 @@ column:
       type: str
       allowed_values:
         - cdisc-required
-        - company-required
+        - org-required
         - optional
         - conditional
       description: "CDISC core designation"

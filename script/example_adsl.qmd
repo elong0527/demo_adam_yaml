@@ -1,45 +1,43 @@
-#!/usr/bin/env python3
-"""
-Example usage of the ADaM YAML Handler module
-"""
+---
+title: "Example ADSL Data Derivation"
+format: gfm
+---
 
+# Update YAML Spec 
+
+```{python}
 import sys
-from pathlib import Path
-
-# Add src to path for development
 sys.path.insert(0, 'src')
 
 from adam_yaml import AdamSpec
+```
 
-# create spec without schema validation 
-adsl_spec = AdamSpec("spec/adsl_study.yaml")
-
+```{python}
 # create spec with schema validation
-adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
+adsl_spec1 = AdamSpec("../spec/adsl_study1.yaml", schema_path="../spec/schema.yaml")
+adsl_spec2 = AdamSpec("../spec/adsl_study2.yaml", schema_path="../spec/schema.yaml")
 
 # store the combined YAML file
-adsl_spec.save("spec/adsl_study_combined.yaml")
+adsl_spec1.save("../spec/adsl_study_combined1.yaml")
+adsl_spec2.save("../spec/adsl_study_combined2.yaml")
+```
+
+# Derive ADSL Data 
 
 ```{python}
 import polars as pl 
 ```
 
-# Configure Polars to show all columns in output
 ```{python}
 pl.Config.set_tbl_cols(-1)  # Show all columns
 pl.Config.set_tbl_rows(20)  # Show up to 20 rows
 pl.Config.set_fmt_str_lengths(100)  # Show longer strings
 ```
 
-
-# Load SDTM datasets
+## Load SDTM datasets
 ```{python}
 ig = pl.read_csv("../ADaMIG/ADaMIG_v1.3.csv")
 dm = pl.read_parquet("../data/sdtm/dm.parquet")
 sv = pl.read_parquet("../data/sdtm/dm.parquet")
 vs = pl.read_parquet("../data/sdtm/vs.parquet")
-```
-
-```{python}
-sv
 ```
