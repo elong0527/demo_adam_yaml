@@ -109,6 +109,7 @@ column:
       
     derivation:
       type: dict
+      mutually_exclusive: [["constant", "source"], ["constant", "function"], ["constant", "condition"]]
       fields:
         source:
           type: str
@@ -117,11 +118,41 @@ column:
           type: str
           description: "Derivation function"
         constant:
-          type: str
+          type: [str, int, float]
           description: "Constant value"
         filter:
           type: str
           description: "Filter condition"
+        aggregation:
+          type: dict
+          fields:
+            function:
+              type: str
+              allowed_values: ["first", "last", "mean", "median", "min", "max", "sum", "count", "closest"]
+              description: "Aggregation function"
+            target:
+              type: str
+              description: "Target date/value for closest function"
+        mapping:
+          type: dict
+          description: "Value mapping dictionary"
+        cut:
+          type: dict
+          description: "Categorization rules"
+        condition:
+          type: list
+          description: "Conditional derivation rules"
+          item_type: dict
+          fields:
+            when:
+              type: str
+              description: "Condition expression"
+            then:
+              type: dict
+              description: "Derivation when condition is true"
+            else:
+              type: dict
+              description: "Default derivation"
           
     validation:
       type: dict
