@@ -1,5 +1,8 @@
 # Project Context for Claude
 
+## Important Guidelines
+- **Use ASCII characters only** - No emojis or special Unicode characters in code or commits
+
 ## Project Overview
 This project demonstrates the use of YAML-based specifications for defining ADaM (Analysis Data Model) datasets in clinical trials, following CDISC standards.
 
