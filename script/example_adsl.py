@@ -19,3 +19,8 @@ adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
 
 # store the combined YAML file
 adsl_spec.save("spec/adsl_study_combined.yaml")
+
+import polars as pl 
+
+dm = pl.read_parquet("data/sdtm/dm.parquet")
+vs = pl.read_parquet("data/sdtm/vs.parquet")
