@@ -6,7 +6,7 @@ columns:
 
   - name: STUDYID
     derivation:
-      constant: "study-999"
+      constant: "CDISCPILOT01"
 
   - name: AGEGRP1
     drop: True
