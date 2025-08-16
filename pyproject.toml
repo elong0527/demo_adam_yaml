@@ -92,7 +92,7 @@ show_error_codes = true
 show_error_context = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["src/adam_yaml/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
