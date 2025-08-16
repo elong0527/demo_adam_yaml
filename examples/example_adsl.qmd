@@ -9,7 +9,7 @@ format: gfm
 import sys
 sys.path.insert(0, 'src')
 
-from adam_yaml import AdamSpec
+from adam_spec import AdamSpec
 ```
 
 ```{python}
@@ -40,4 +40,17 @@ ig = pl.read_csv("../ADaMIG/ADaMIG_v1.3.csv")
 dm = pl.read_parquet("../data/sdtm/dm.parquet")
 sv = pl.read_parquet("../data/sdtm/dm.parquet")
 vs = pl.read_parquet("../data/sdtm/vs.parquet")
+```
+
+## Load Spec 
+```{python}
+from adam_derivation.loaders import SpecLoader
+
+spec = SpecLoader("../spec/adsl_study1.yaml")
+
+print(spec.domain)
+print(spec.keys)
+print(spec.columns)
+print(spec.get_column_specs("USUBJID"))
+print(spec.get_column_specs(["STUDYID", "USUBJID"]))
 ```

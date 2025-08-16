@@ -23,21 +23,19 @@ class AdamDerivation:
     Main engine for deriving ADaM datasets from SDTM data using YAML specifications
     """
     
-    def __init__(self, spec_path: str, sdtm_dir: str, schema_path: Optional[str] = None):
+    def __init__(self, spec_path: str, sdtm_dir: str):
         """
         Initialize the derivation engine
         
         Args:
             spec_path: Path to YAML specification file
             sdtm_dir: Directory containing SDTM parquet files
-            schema_path: Optional path to schema for validation
         """
         self.spec_path = Path(spec_path)
         self.sdtm_dir = Path(sdtm_dir)
-        self.schema_path = Path(schema_path) if schema_path else None
         
         # Initialize components
-        self.spec_loader = SpecLoader(str(self.spec_path), str(self.schema_path) if self.schema_path else None)
+        self.spec_loader = SpecLoader(str(self.spec_path))
         self.sdtm_loader = SDTMLoader(str(self.sdtm_dir))
         
         # Load specification
