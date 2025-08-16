@@ -20,7 +20,26 @@ adsl_spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
 # store the combined YAML file
 adsl_spec.save("spec/adsl_study_combined.yaml")
 
+```{python}
 import polars as pl 
+```
 
-dm = pl.read_parquet("data/sdtm/dm.parquet")
-vs = pl.read_parquet("data/sdtm/vs.parquet")
+# Configure Polars to show all columns in output
+```{python}
+pl.Config.set_tbl_cols(-1)  # Show all columns
+pl.Config.set_tbl_rows(20)  # Show up to 20 rows
+pl.Config.set_fmt_str_lengths(100)  # Show longer strings
+```
+
+
+# Load SDTM datasets
+```{python}
+ig = pl.read_csv("../ADaMIG/ADaMIG_v1.3.csv")
+dm = pl.read_parquet("../data/sdtm/dm.parquet")
+sv = pl.read_parquet("../data/sdtm/dm.parquet")
+vs = pl.read_parquet("../data/sdtm/vs.parquet")
+```
+
+```{python}
+sv
+```
