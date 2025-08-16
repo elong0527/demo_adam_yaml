@@ -1,30 +1,21 @@
 """
-ADaM YAML Specification Handler Module
+ADaM YAML Specification Handler - Simplified Module
 
-A hierarchical YAML specification system for defining ADaM (Analysis Data Model) 
-datasets with inheritance, validation, and merging capabilities.
+A minimal, easy-to-maintain module for handling hierarchical YAML specifications
+for ADaM (Analysis Data Model) datasets following CDISC standards.
 """
 
-from .handler import (
+from .adam_yaml import (
     ADaMYAMLHandler,
     ADaMSpec,
-    Column,
-    Derivation,
-    ValidationRule,
-    CoreType,
-    DataType
+    Column
 )
-from .merger import YAMLMerger
-from .loader import IncludeLoader
+
+__version__ = "0.2.1"
+__author__ = "ADaM YAML Team"
 
 __all__ = [
     "ADaMYAMLHandler",
-    "ADaMSpec",
-    "Column",
-    "Derivation",
-    "ValidationRule",
-    "CoreType",
-    "DataType",
-    "YAMLMerger",
-    "IncludeLoader",
+    "ADaMSpec", 
+    "Column"
 ]

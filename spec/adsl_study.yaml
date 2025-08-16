@@ -1,6 +1,6 @@
-config: 
-  - !include adsl_common.yaml
-  - !include adsl_project.yaml
+parents: 
+  - adsl_common.yaml
+  - adsl_project.yaml
   
 columns:
 
