@@ -162,6 +162,10 @@ class SchemaValidator:
         elif isinstance(value, list):
             self._validate_list_field(name, value, schema)
         
+        # Dict-specific validations
+        elif isinstance(value, dict):
+            self._validate_dict_field(name, value, schema)
+        
         # Allowed values validation
         if 'allowed_values' in schema:
             if value not in schema['allowed_values']:
@@ -214,6 +218,27 @@ class SchemaValidator:
                         value=type(item).__name__,
                         expected=item_type
                     ))
+    
+    def _validate_dict_field(self, name: str, value: dict, schema: dict) -> None:
+        """Validate a dictionary field with nested structure"""
+        # Check required fields within the dict
+        required_fields = schema.get('required_fields', [])
+        for req_field in required_fields:
+            if req_field not in value or value[req_field] is None:
+                self.results.append(ValidationResult(
+                    field=f"{name}.{req_field}",
+                    rule='required_field',
+                    severity='error',
+                    message=f"Required field '{name}.{req_field}' is missing",
+                    expected=f"Field '{req_field}' must be present in '{name}'"
+                ))
+        
+        # Validate nested fields if schema provided
+        nested_fields_schema = schema.get('fields', {})
+        for field_name, field_value in value.items():
+            if field_name in nested_fields_schema:
+                nested_schema = nested_fields_schema[field_name]
+                self._validate_field(f"{name}.{field_name}", field_value, nested_schema)
     
     def _validate_columns(self, columns: list[dict]) -> None:
         """Validate column specifications with updated schema rules"""

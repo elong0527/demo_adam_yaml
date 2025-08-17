@@ -270,12 +270,18 @@ class AdamSpec:
             Absolute path to SDTM directory
             
         Raises:
-            ValueError: If sdtm_dir is not specified in the specification
+            ValueError: If dir.sdtm is not specified in the specification
         """
-        sdtm_dir = self._raw_spec.get('sdtm_dir')
+        # Check for new structure first (dir.sdtm)
+        dir_config = self._raw_spec.get('dir', {})
+        sdtm_dir = dir_config.get('sdtm')
+        
+        # Fallback to old structure for backward compatibility
+        if not sdtm_dir:
+            sdtm_dir = self._raw_spec.get('sdtm_dir')
         
         if not sdtm_dir:
-            raise ValueError(f"No sdtm_dir specified in {self.path}. This is a required field.")
+            raise ValueError(f"No dir.sdtm specified in {self.path}. This is a required field.")
         
         # Convert to Path for proper handling
         sdtm_path = Path(sdtm_dir)
@@ -285,3 +291,30 @@ class AdamSpec:
             sdtm_path = self.path.parent / sdtm_path
             
         return str(sdtm_path.resolve())
+    
+    @property
+    def adam_dir(self) -> str:
+        """
+        Get the ADaM output directory path from specification.
+        
+        Returns:
+            Absolute path to ADaM output directory
+            
+        Raises:
+            ValueError: If dir.adam is not specified in the specification
+        """
+        # Get from new structure (dir.adam)
+        dir_config = self._raw_spec.get('dir', {})
+        adam_dir = dir_config.get('adam')
+        
+        if not adam_dir:
+            raise ValueError(f"No dir.adam specified in {self.path}. This is a required field.")
+        
+        # Convert to Path for proper handling
+        adam_path = Path(adam_dir)
+        
+        # If relative path, resolve relative to spec file directory
+        if not adam_path.is_absolute():
+            adam_path = self.path.parent / adam_path
+            
+        return str(adam_path.resolve())

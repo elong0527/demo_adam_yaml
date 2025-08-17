@@ -3,7 +3,7 @@ title: "Example ADSL Data Derivation"
 format: gfm
 ---
 
-# Update YAML Spec 
+# YAML Spec Preparation
 
 ```{python}
 from adamyaml import AdamSpec
@@ -31,6 +31,14 @@ pl.DataFrame(adsl_spec1.get_data_dependency())
 ```
 
 # Derive ADSL Data 
+
+```{python}
+from adamyaml.adam_derivation.engine import AdamDerivation
+```
+
+```{python}
+adsl_derivation = AdamDerivation("../spec/adsl_study1.yaml")
+```
 
 ## Load SDTM datasets
 ```{python}

@@ -44,7 +44,7 @@ class AdamDerivation:
         # Initialize validator
         self.validator = DataValidator()
     
-    def derive_dataset(self) -> pl.DataFrame:
+    def build(self) -> pl.DataFrame:
         """
         Main method to derive the ADaM dataset
         
@@ -141,22 +141,29 @@ class AdamDerivation:
         
         return target_df
     
-    def save_dataset(self, output_path: str, df: pl.DataFrame | None = None):
+    def save(self) -> Path:
         """
-        Save the derived dataset to parquet file
+        Build and save the derived dataset to parquet file in the adam directory.
+        Uses the domain name as the filename.
         
-        Args:
-            output_path: Path to save the dataset
-            df: DataFrame to save (if None, derive first)
+        Returns:
+            Path to the saved file
         """
-        if df is None:
-            df = self.derive_dataset()
+        # Build the dataset
+        df = self.build()
         
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Get output directory from spec
+        adam_dir = Path(self.spec.adam_dir)
+        adam_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Use domain name as filename
+        filename = f"{self.spec.domain.lower()}.parquet"
+        output_path = adam_dir / filename
         
         df.write_parquet(output_path)
         self.python_logger.info(f"Dataset saved to {output_path}")
+        
+        return output_path
     
     def get_derivation_log(self) -> dict[str, Any]:
         """

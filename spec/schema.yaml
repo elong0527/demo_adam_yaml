@@ -6,7 +6,7 @@ root:
   required:
     - domain
     - columns
-    - sdtm_dir
+    - dir
     - schema
   optional:
     - key
@@ -48,9 +48,19 @@ fields:
     type: dict
     description: "Additional metadata"
     
-  sdtm_dir:
-    type: str
-    description: "Path to SDTM data directory (relative to spec file or absolute)"
+  dir:
+    type: dict
+    description: "Directory paths for data sources and outputs"
+    required_fields:
+      - sdtm
+      - adam
+    fields:
+      sdtm:
+        type: str
+        description: "Path to SDTM data directory (relative to spec file or absolute)"
+      adam:
+        type: str
+        description: "Path to ADaM output directory (relative to spec file or absolute)"
     
   schema:
     type: str
