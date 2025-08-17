@@ -93,7 +93,7 @@ columns:
     source: VS.VSORRES
     filter: VS.TESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
     aggregation:
-      function: closet
+      function: closest
       target: DM.RFSTDTC
   validation:
     maximum_missing_percentage: 5
@@ -105,7 +105,7 @@ columns:
     source: VS.VSORRES
     filter: VS.TESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
     aggregation:
-      function: closet
+      function: closest
       target: DM.RFSTDTC
   validation:
     maximum_missing_percentage: 5
