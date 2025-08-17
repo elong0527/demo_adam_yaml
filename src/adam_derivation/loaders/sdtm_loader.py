@@ -2,14 +2,10 @@ import polars as pl
 from pathlib import Path
 from typing import Dict, TYPE_CHECKING
 import logging
-import sys
-
-# Add parent directory for imports
-sys.path.append(str(Path(__file__).parent.parent.parent))
 
 # Avoid circular import at runtime
 if TYPE_CHECKING:
-    from adam_spec import AdamSpec
+    from ...adam_spec import AdamSpec
 
 
 class SDTMLoader:

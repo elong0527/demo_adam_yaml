@@ -6,10 +6,7 @@ format: gfm
 # Update YAML Spec 
 
 ```{python}
-import sys
-sys.path.insert(0, 'src')
-
-from adam_spec import AdamSpec
+from adamyaml import AdamSpec
 ```
 
 ```{python}

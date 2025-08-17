@@ -10,13 +10,8 @@ import logging
 from .loaders import SDTMLoader
 from .derivations import DerivationFactory
 from .utils.logger import DerivationLogger
-
-# Import from separate modules
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-from adam_spec import AdamSpec
-from adam_validation import DataValidator
+from ..adam_spec import AdamSpec
+from ..adam_validation import DataValidator
 
 
 class AdamDerivation:
