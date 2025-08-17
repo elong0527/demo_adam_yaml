@@ -1,5 +1,5 @@
 domain: ADSL
-key: [DOMAIN, USUBJID]
+key: [USUBJID]
 schema: schema.yaml
 
 columns: 

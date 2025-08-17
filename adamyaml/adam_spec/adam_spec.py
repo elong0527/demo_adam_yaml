@@ -81,6 +81,12 @@ class AdamSpec:
                 logger.warning(f"Validation found {len(self._errors)} errors")
         else:
             logger.warning(f"No schema found for {self.path.name} - validation skipped")
+        
+        # Validate key variables (strict validation - fail early)
+        self._validate_key_variables()
+        if self._errors:
+            error_msg = "\n".join(self._errors)
+            raise ValueError(f"Key variable validation failed:\n{error_msg}")
     
     def _build_spec(self) -> None:
         """Build specification with inheritance."""
@@ -176,6 +182,72 @@ class AdamSpec:
             logger.error(f"Schema validation failed: {e}")
             self._errors.append(f"Schema validation error: {e}")
 
+    def _validate_key_variables(self) -> None:
+        """
+        Validate key variables follow strict rules.
+        Adds errors to self._errors if validation fails.
+        """
+        if not self.key:
+            return  # No key variables to validate
+        
+        source_datasets = set()
+        key_var_errors = []
+        
+        for key_var in self.key:
+            # Get column specification for this key variable
+            col_spec = None
+            for col in self.columns:
+                if col.name == key_var:
+                    col_spec = col
+                    break
+            
+            if not col_spec:
+                key_var_errors.append(f"Key variable '{key_var}' not found in column specifications")
+                continue
+            
+            # Get derivation dict directly
+            derivation = col_spec.derivation or {}
+            
+            # Rule 1: Must use source derivation only
+            if 'source' not in derivation:
+                key_var_errors.append(
+                    f"Key variable '{key_var}' must use 'source' derivation, "
+                    f"found: {list(derivation.keys())}"
+                )
+                continue
+            
+            # Check for additional derivation types (should be source only)
+            other_keys = set(derivation.keys()) - {'source'}
+            if other_keys:
+                key_var_errors.append(
+                    f"Key variable '{key_var}' must use only 'source' derivation, "
+                    f"found additional: {other_keys}"
+                )
+            
+            # Rule 2: Source must be in DATASET.COLUMN format
+            source_str = derivation.get('source', '')
+            if '.' not in source_str:
+                key_var_errors.append(
+                    f"Key variable '{key_var}' source must be in format 'DATASET.COLUMN', "
+                    f"found: '{source_str}'"
+                )
+                continue
+            
+            # Track source dataset
+            dataset_name = source_str.split('.', 1)[0]
+            source_datasets.add(dataset_name)
+        
+        # Rule 3: All key variables must come from the same dataset
+        if len(source_datasets) > 1:
+            key_var_errors.append(
+                f"All key variables must come from the same source dataset, "
+                f"found multiple: {source_datasets}"
+            )
+        
+        # Add all errors to self._errors
+        if key_var_errors:
+            self._errors.extend(key_var_errors)
+    
     def to_dict(self, include_parents: bool = False) -> dict:
         """Convert to dictionary format."""
         result = deepcopy(self._raw_spec)

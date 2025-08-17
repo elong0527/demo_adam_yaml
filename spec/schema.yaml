@@ -28,6 +28,11 @@ fields:
     min_items: 1
     max_items: 5
     description: "List of unique row identifier variables for the dataset"
+    validation_rules:
+      - all_must_be_columns: true
+      - derivation_type: source_only
+      - same_source_dataset: true
+      - no_duplicates: true
     
   parents:
     type: list
@@ -203,3 +208,21 @@ column:
           min: 0
           max: 100
           description: "Maximum allowed missing percentage"
+
+# Validation rules for spec-level constraints
+validation_rules:
+  key_variables:
+    description: "Strict rules for key variables"
+    rules:
+      - name: "source_only_derivation"
+        description: "Key variables must use only 'source' derivation type"
+        severity: "error"
+      - name: "same_source_dataset"
+        description: "All key variables must come from the same source dataset"
+        severity: "error"
+      - name: "format_dataset_column"
+        description: "Source must be in format DATASET.COLUMN"
+        severity: "error"
+      - name: "no_duplicates"
+        description: "Key variable combination must be unique in source dataset"
+        severity: "error"
