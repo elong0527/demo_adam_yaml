@@ -35,7 +35,7 @@ class AdamDerivation:
             raise ValueError(f"Specification validation failed with {len(self.spec._errors)} errors:\n{error_msg}")
         
         # Initialize SDTM loader using sdtm_dir from spec
-        self.sdtm_loader = SDTMLoader(self.spec.sdtm_dir, self.spec)
+        self.sdtm_loader = SDTMLoader(self.spec.sdtm_dir)
         
         # Initialize logger
         self.logger = DerivationLogger(self.spec.domain)
@@ -53,9 +53,16 @@ class AdamDerivation:
         """
         self.python_logger.info(f"Starting derivation for {self.spec.domain}")
         
-        # Load required SDTM datasets (SDTMLoader will handle XX.YYYY parsing)
-        source_data = self.sdtm_loader.get_required_datasets()
-        self.python_logger.info(f"Loaded {len(source_data)} source datasets")
+        # Get required datasets from spec and load them
+        dependencies = self.spec.get_data_dependency()
+        required_datasets = list(set(dep['sdtm_data'] for dep in dependencies))
+        
+        # Filter out self-references
+        required_datasets = [ds for ds in required_datasets if ds != self.spec.domain]
+        
+        # Load required SDTM datasets
+        source_data = self.sdtm_loader.load_datasets(required_datasets)
+        self.python_logger.info(f"Loaded {len(source_data)} source datasets: {list(source_data.keys())}")
         
         # Initialize target dataset as empty DataFrame
         target_df = pl.DataFrame()

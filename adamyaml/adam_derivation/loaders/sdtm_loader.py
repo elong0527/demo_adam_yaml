@@ -1,35 +1,28 @@
 import polars as pl
 from pathlib import Path
-from typing import TYPE_CHECKING
 import logging
-
-# Avoid circular import at runtime
-if TYPE_CHECKING:
-    from ...adam_spec import AdamSpec
 
 
 class SDTMLoader:
-    """Load and cache SDTM datasets"""
+    """Load and cache SDTM datasets."""
     
-    def __init__(self, sdtm_dir: str, spec: 'AdamSpec'):
+    def __init__(self, sdtm_dir: str):
         """
-        Initialize SDTM loader
+        Initialize SDTM loader.
         
         Args:
             sdtm_dir: Directory containing SDTM parquet files
-            spec: AdamSpec instance containing the specification
         """
         self.sdtm_dir = Path(sdtm_dir)
         if not self.sdtm_dir.exists():
             raise FileNotFoundError(f"SDTM directory not found: {sdtm_dir}")
         
-        self.spec = spec
         self._cache: dict[str, pl.DataFrame] = {}
         self.logger = logging.getLogger(__name__)
     
     def load_dataset(self, dataset_name: str) -> pl.DataFrame:
         """
-        Load a single SDTM dataset with caching
+        Load a single SDTM dataset with caching.
         
         Args:
             dataset_name: Name of dataset (e.g., 'DM', 'VS', 'EX')
@@ -57,9 +50,9 @@ class SDTMLoader:
         
         return df
     
-    def load_datasets(self, dataset_names: list) -> dict[str, pl.DataFrame]:
+    def load_datasets(self, dataset_names: list[str]) -> dict[str, pl.DataFrame]:
         """
-        Load multiple SDTM datasets
+        Load multiple SDTM datasets.
         
         Args:
             dataset_names: List of dataset names
@@ -76,23 +69,7 @@ class SDTMLoader:
         
         return datasets
     
-    def get_required_datasets(self) -> dict[str, pl.DataFrame]:
-        """Load all datasets required by the specification."""
-        # Use AdamSpec's get_data_dependency method to get XX.YYYY patterns
-        dependencies = self.spec.get_data_dependency()
-        
-        # Extract unique dataset names
-        required = set()
-        for dep in dependencies:
-            dataset = dep['sdtm_data']
-            # Filter out current dataset references
-            if dataset != self.spec.domain:
-                required.add(dataset)
-        
-        self.logger.info(f"Required datasets: {required}")
-        return self.load_datasets(list(required))
-    
     def clear_cache(self):
-        """Clear the dataset cache"""
+        """Clear the dataset cache."""
         self._cache.clear()
         self.logger.debug("Cleared SDTM cache")
