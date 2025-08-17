@@ -1,7 +1,6 @@
 import yaml
 import re
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass, asdict
 from copy import deepcopy
 import logging
@@ -16,11 +15,11 @@ class Column:
     """ADaM column specification"""
     name: str
     type: str
-    label: Optional[str] = None
-    core: Optional[str] = None
-    derivation: Optional[Dict[str, Any]] = None
-    validation: Optional[Dict[str, Any]] = None
-    drop: Optional[bool] = None
+    label: str | None = None
+    core: str | None = None
+    derivation: dict | None = None
+    validation: dict | None = None
+    drop: bool | None = None
     
     def __post_init__(self):
         """Post-initialization processing"""
@@ -28,7 +27,7 @@ class Column:
         if self.label is None:
             self.label = self.name
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to dictionary, excluding None values and drop flag"""
         result = {}
         for key, value in asdict(self).items():
@@ -58,7 +57,7 @@ class AdamSpec:
         validation_errors: List of validation errors if any
     """
     
-    def __init__(self, path: Union[str, Path], schema_path: Optional[Union[str, Path]] = None):
+    def __init__(self, path: str | Path, schema_path: str | Path | None = None):
         """
         Initialize and build complete specification from YAML file
         
@@ -74,13 +73,13 @@ class AdamSpec:
         self.path = Path(path)
         self.schema_path = Path(schema_path) if schema_path else None
         self.domain: str = ""  
-        self.key: List[str] = []
-        self.columns: List[Column] = []
-        self.parents: List[str] = []
-        self._errors: List[str] = []
-        self._warnings: List[str] = []
-        self._raw_spec: Dict = {}
-        self._schema_results: List[ValidationResult] = []
+        self.key: list[str] = []
+        self.columns: list[Column] = []
+        self.parents: list[str] = []
+        self._errors: list[str] = []
+        self._warnings: list[str] = []
+        self._raw_spec: dict = {}
+        self._schema_results: list[ValidationResult] = []
         
         # Build specification
         self._build_spec()
@@ -128,7 +127,7 @@ class AdamSpec:
         self._raw_spec = final_spec
         self._extract_fields(final_spec)
     
-    def _collect_yaml_files(self, study_spec: Dict) -> List[str]:
+    def _collect_yaml_files(self, study_spec: dict) -> list[str]:
         """Collect all YAML files to merge including parents"""
         yaml_files = []
         spec_dir = self.path.parent
@@ -147,7 +146,7 @@ class AdamSpec:
         yaml_files.append(str(self.path))
         return yaml_files
     
-    def _extract_fields(self, spec: Dict) -> None:
+    def _extract_fields(self, spec: dict) -> None:
         """Extract fields from merged specification"""
         # Extract standard fields
         self.domain = spec.get('domain', '')
@@ -171,7 +170,7 @@ class AdamSpec:
             except TypeError as e:
                 self._errors.append(f"Invalid column specification: {e}")
     
-    def _process_columns(self, columns: List[Dict]) -> List[Dict]:
+    def _process_columns(self, columns: list[dict]) -> list[dict]:
         """Process columns, handling drop flags and defaults"""
         result = []
         dropped_names = set()
@@ -210,7 +209,7 @@ class AdamSpec:
             logger.error(f"Schema validation failed: {e}")
             self._errors.append(f"Schema validation error: {e}")
 
-    def to_dict(self, include_parents: bool = False) -> Dict:
+    def to_dict(self, include_parents: bool = False) -> dict:
         """
         Convert to dictionary format
         
@@ -238,7 +237,7 @@ class AdamSpec:
             sort_keys=False
         )
     
-    def save(self, output_path: Union[str, Path]) -> None:
+    def save(self, output_path: str | Path) -> None:
         """
         Save specification to file
         
