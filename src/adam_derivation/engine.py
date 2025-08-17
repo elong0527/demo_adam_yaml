@@ -7,14 +7,15 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import logging
 
-from .loaders import SDTMLoader, SpecLoader
+from .loaders import SDTMLoader
 from .derivations import DerivationFactory
 from .utils.logger import DerivationLogger
 
-# Import from separate adam_validation module
+# Import from separate modules
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
+from adam_spec import AdamSpec
 from adam_validation import DataValidator
 
 
@@ -32,18 +33,28 @@ class AdamDerivation:
         """
         self.spec_path = Path(spec_path)
         
-        # Initialize spec loader
-        self.spec_loader = SpecLoader(str(self.spec_path))
-    
-        # Initialize SDTM loader
-        sdtm_dir = Path(self.spec_loader.sdtm_dir)
-        self.sdtm_loader = SDTMLoader(str(sdtm_dir))
+        # Load specification using AdamSpec
+        self.spec = AdamSpec(str(self.spec_path))
         
-        # Load specification
-        domain = self.spec_loader.domain
+        # Check for validation errors
+        if self.spec._errors:
+            error_msg = "\n".join([f"  - {e}" for e in self.spec._errors])
+            raise ValueError(f"Specification validation failed with {len(self.spec._errors)} errors:\n{error_msg}")
+        
+        # Get sdtm_dir from spec
+        sdtm_dir = self.spec._raw_spec.get('sdtm_dir')
+        if sdtm_dir:
+            # Resolve relative paths relative to spec file directory
+            if not Path(sdtm_dir).is_absolute():
+                sdtm_dir = str(self.spec_path.parent / sdtm_dir)
+        else:
+            raise ValueError(f"No sdtm_dir specified in {spec_path}. This is a required field.")
+        
+        # Initialize SDTM loader  
+        self.sdtm_loader = SDTMLoader(sdtm_dir, self.spec)
         
         # Initialize logger
-        self.logger = DerivationLogger(domain)
+        self.logger = DerivationLogger(self.spec.domain)
         self.python_logger = logging.getLogger(__name__)
         
         # Initialize validator
@@ -56,17 +67,17 @@ class AdamDerivation:
         Returns:
             DataFrame containing the derived ADaM dataset
         """
-        self.python_logger.info(f"Starting derivation for {self.spec_loader.domain}")
+        self.python_logger.info(f"Starting derivation for {self.spec.domain}")
         
-        # Load required SDTM datasets
-        source_data = self.sdtm_loader.get_required_datasets(self.spec_loader.load_spec())
+        # Load required SDTM datasets (SDTMLoader will handle XX.YYYY parsing)
+        source_data = self.sdtm_loader.get_required_datasets()
         self.python_logger.info(f"Loaded {len(source_data)} source datasets")
         
         # Initialize target dataset as empty DataFrame
         target_df = pl.DataFrame()
         
         # Get column specifications
-        columns = self.spec_loader.get_column_specs()
+        columns = self.spec.get_column_specs()
         
         # Process each column
         for col_spec in columns:
@@ -118,7 +129,7 @@ class AdamDerivation:
         
         # Validate the dataset
         self.python_logger.info("Validating derived dataset")
-        validation_results = self.validator.validate_dataset(target_df, self.spec_loader.load_spec())
+        validation_results = self.validator.validate_dataset(target_df, self.spec.to_dict())
         
         for result in validation_results:
             if result["status"] == "error":

@@ -1,6 +1,5 @@
-"""Data loading utilities for SDTM and specifications."""
+"""Data loading utilities for SDTM datasets."""
 
 from .sdtm_loader import SDTMLoader
-from .spec_loader import SpecLoader
 
-__all__ = ["SDTMLoader", "SpecLoader"]
+__all__ = ["SDTMLoader"]

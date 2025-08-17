@@ -1,23 +1,33 @@
 import polars as pl
 from pathlib import Path
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 import logging
+import sys
+
+# Add parent directory for imports
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# Avoid circular import at runtime
+if TYPE_CHECKING:
+    from adam_spec import AdamSpec
 
 
 class SDTMLoader:
     """Load and cache SDTM datasets"""
     
-    def __init__(self, sdtm_dir: str):
+    def __init__(self, sdtm_dir: str, spec: 'AdamSpec'):
         """
         Initialize SDTM loader
         
         Args:
             sdtm_dir: Directory containing SDTM parquet files
+            spec: AdamSpec instance containing the specification
         """
         self.sdtm_dir = Path(sdtm_dir)
         if not self.sdtm_dir.exists():
             raise FileNotFoundError(f"SDTM directory not found: {sdtm_dir}")
         
+        self.spec = spec
         self._cache: Dict[str, pl.DataFrame] = {}
         self.logger = logging.getLogger(__name__)
     
@@ -70,50 +80,18 @@ class SDTMLoader:
         
         return datasets
     
-    def get_required_datasets(self, spec: dict) -> Dict[str, pl.DataFrame]:
-        """
-        Load all datasets required by a specification
+    def get_required_datasets(self) -> Dict[str, pl.DataFrame]:
+        """Load all datasets required by the specification."""
+        # Use AdamSpec's get_data_dependency method to get XX.YYYY patterns
+        dependencies = self.spec.get_data_dependency()
         
-        Args:
-            spec: ADaM specification dictionary
-        
-        Returns:
-            Dictionary of required datasets
-        """
+        # Extract unique dataset names
         required = set()
-        
-        # Parse columns for source datasets
-        for column in spec.get("columns", []):
-            derivation = column.get("derivation", {})
-            
-            # Check source field
-            source = derivation.get("source", "")
-            if "." in source:
-                dataset, _ = source.split(".", 1)
+        for dep in dependencies:
+            dataset = dep['sdtm_data']
+            # Filter out current dataset references
+            if dataset != self.spec.domain:
                 required.add(dataset)
-            
-            # Check filter field
-            filter_expr = derivation.get("filter", "")
-            for part in filter_expr.split():
-                if "." in part:
-                    dataset = part.split(".")[0]
-                    required.add(dataset)
-            
-            # Check aggregation target
-            agg = derivation.get("aggregation", {})
-            target = agg.get("target", "")
-            if "." in target:
-                dataset, _ = target.split(".", 1)
-                required.add(dataset)
-            
-            # Check condition expressions
-            conditions = derivation.get("condition", [])
-            for cond in conditions:
-                when_expr = cond.get("when", "")
-                for part in when_expr.split():
-                    if "." in part:
-                        dataset = part.split(".")[0]
-                        required.add(dataset)
         
         self.logger.info(f"Required datasets: {required}")
         return self.load_datasets(list(required))
