@@ -1,4 +1,5 @@
 import yaml
+import re
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass, asdict
@@ -9,9 +10,6 @@ from .schema_validator import SchemaValidator, ValidationResult
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-
 
 @dataclass
 class Column:
@@ -254,3 +252,71 @@ class AdamSpec:
             f.write(self.to_yaml())
         
         logger.info(f"Saved YAML specification to {output}")
+    
+    def get_column_specs(self, names: str | list[str] | None = None) -> dict | list[dict] | None:
+        """
+        Get column specifications.
+        
+        Args:
+            names: Optional column name(s) to retrieve specific column(s)
+                   Can be a single string or a list of strings
+        
+        Returns:
+            If names is a string: Column spec dict for that column, or None if not found
+            If names is a list: List of column spec dicts for those columns (skips not found)
+            If names is None: List of all column specification dictionaries
+        """
+        if names is not None:
+            # Handle single name (string)
+            if isinstance(names, str):
+                for col in self.columns:
+                    if col.name == names:
+                        return col.to_dict()
+                return None
+            
+            # Handle multiple names (list)
+            elif isinstance(names, list):
+                result = []
+                for name in names:
+                    for col in self.columns:
+                        if col.name == name:
+                            result.append(col.to_dict())
+                            break
+                return result
+        
+        # Return all columns
+        return [col.to_dict() for col in self.columns]
+    
+    def get_data_dependency(self) -> list[dict]:
+        """
+        Extract SDTM data dependencies from the specification.
+        
+        Returns:
+            List of dictionaries with keys:
+            - adam_variable: ADaM variable name
+            - sdtm_data: SDTM dataset name
+            - sdtm_variable: SDTM variable name
+        """
+        # Pattern for dataset.variable references
+        pattern = re.compile(r'\b([A-Z][A-Z0-9_]{0,19})\.([A-Z][A-Z0-9_]{0,19})\b')
+        
+        dependencies = []
+        seen = set()  # Track unique combinations
+        
+        # Search each column for dataset.variable patterns
+        for column in self.columns:
+            # Find all matches in column dictionary
+            matches = pattern.findall(str(column.to_dict()))
+            
+            for sdtm_data, sdtm_variable in matches:
+                # Create unique key for deduplication
+                key = (column.name, sdtm_data, sdtm_variable)
+                if key not in seen:
+                    seen.add(key)
+                    dependencies.append({
+                        'adam_variable': column.name,
+                        'sdtm_data': sdtm_data,
+                        'sdtm_variable': sdtm_variable
+                    })
+        
+        return dependencies

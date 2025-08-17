@@ -13,26 +13,27 @@ from adam_spec import AdamSpec
 ```
 
 ```{python}
-# create spec with schema validation
-adsl_spec1 = AdamSpec("../spec/adsl_study1.yaml", schema_path="../spec/schema.yaml")
-adsl_spec2 = AdamSpec("../spec/adsl_study2.yaml", schema_path="../spec/schema.yaml")
-
-# store the combined YAML file
-adsl_spec1.save("../spec/adsl_study_combined1.yaml")
-adsl_spec2.save("../spec/adsl_study_combined2.yaml")
-```
-
-# Derive ADSL Data 
-
-```{python}
 import polars as pl 
-```
 
-```{python}
 pl.Config.set_tbl_cols(-1)  # Show all columns
 pl.Config.set_tbl_rows(20)  # Show up to 20 rows
 pl.Config.set_fmt_str_lengths(100)  # Show longer strings
 ```
+
+```{python}
+# create spec with schema validation
+adsl_spec1 = AdamSpec("../spec/adsl_study1.yaml")
+adsl_spec1.save("../spec/adsl_study_combined1.yaml")
+
+adsl_spec2 = AdamSpec("../spec/adsl_study2.yaml")
+adsl_spec2.save("../spec/adsl_study_combined2.yaml")
+```
+
+```{python}
+pl.DataFrame(adsl_spec1.get_data_dependency())
+```
+
+# Derive ADSL Data 
 
 ## Load SDTM datasets
 ```{python}
@@ -42,15 +43,3 @@ sv = pl.read_parquet("../data/sdtm/dm.parquet")
 vs = pl.read_parquet("../data/sdtm/vs.parquet")
 ```
 
-## Load Spec 
-```{python}
-from adam_derivation.loaders import SpecLoader
-
-spec = SpecLoader("../spec/adsl_study1.yaml")
-
-print(spec.domain)
-print(spec.keys)
-print(spec.columns)
-print(spec.get_column_specs("USUBJID"))
-print(spec.get_column_specs(["STUDYID", "USUBJID"]))
-```
