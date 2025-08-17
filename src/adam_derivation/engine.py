@@ -34,19 +34,16 @@ class AdamDerivation:
         
         # Initialize spec loader
         self.spec_loader = SpecLoader(str(self.spec_path))
-        
-        # Get sdtm_dir from spec
-        self.sdtm_dir = Path(self.spec_loader.sdtm_dir)
     
         # Initialize SDTM loader
-        self.sdtm_loader = SDTMLoader(str(self.sdtm_dir))
+        sdtm_dir = Path(self.spec_loader.sdtm_dir)
+        self.sdtm_loader = SDTMLoader(str(sdtm_dir))
         
         # Load specification
-        self.spec = self.spec_loader.load_spec()
-        self.domain = self.spec.get("domain", "UNKNOWN")
+        domain = self.spec_loader.domain
         
         # Initialize logger
-        self.logger = DerivationLogger(self.domain)
+        self.logger = DerivationLogger(domain)
         self.python_logger = logging.getLogger(__name__)
         
         # Initialize validator
@@ -59,17 +56,17 @@ class AdamDerivation:
         Returns:
             DataFrame containing the derived ADaM dataset
         """
-        self.python_logger.info(f"Starting derivation for {self.domain}")
+        self.python_logger.info(f"Starting derivation for {self.spec_loader.domain}")
         
         # Load required SDTM datasets
-        source_data = self.sdtm_loader.get_required_datasets(self.spec)
+        source_data = self.sdtm_loader.get_required_datasets(self.spec_loader.load_spec())
         self.python_logger.info(f"Loaded {len(source_data)} source datasets")
         
         # Initialize target dataset as empty DataFrame
         target_df = pl.DataFrame()
         
         # Get column specifications
-        columns = self.spec.get("columns", [])
+        columns = self.spec_loader.get_column_specs()
         
         # Process each column
         for col_spec in columns:
@@ -121,7 +118,7 @@ class AdamDerivation:
         
         # Validate the dataset
         self.python_logger.info("Validating derived dataset")
-        validation_results = self.validator.validate_dataset(target_df, self.spec)
+        validation_results = self.validator.validate_dataset(target_df, self.spec_loader.load_spec())
         
         for result in validation_results:
             if result["status"] == "error":
