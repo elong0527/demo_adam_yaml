@@ -1,12 +1,6 @@
-"""
-SDTM Data Loader
-
-Loads SDTM datasets from parquet files with caching and lazy loading support.
-"""
-
 import polars as pl
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 import logging
 
 
@@ -103,8 +97,7 @@ class SDTMLoader:
             for part in filter_expr.split():
                 if "." in part:
                     dataset = part.split(".")[0]
-                    if dataset.upper() in ["DM", "VS", "EX", "AE", "LB", "CM", "MH", "DS", "SC", "QS"]:
-                        required.add(dataset)
+                    required.add(dataset)
             
             # Check aggregation target
             agg = derivation.get("aggregation", {})
@@ -120,8 +113,7 @@ class SDTMLoader:
                 for part in when_expr.split():
                     if "." in part:
                         dataset = part.split(".")[0]
-                        if dataset.upper() in ["DM", "VS", "EX", "AE", "LB", "CM", "MH", "DS", "SC", "QS"]:
-                            required.add(dataset)
+                        required.add(dataset)
         
         self.logger.info(f"Required datasets: {required}")
         return self.load_datasets(list(required))
