@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Column:
-    """ADaM column specification"""
+    """ADaM column specification."""
     name: str
     type: str
     label: str | None = None
@@ -22,13 +22,11 @@ class Column:
     drop: bool | None = None
     
     def __post_init__(self):
-        """Post-initialization processing"""
-        # Set label to name if not provided
         if self.label is None:
             self.label = self.name
     
     def to_dict(self) -> dict:
-        """Convert to dictionary, excluding None values and drop flag"""
+        """Convert to dictionary, excluding None values and drop flag."""
         result = {}
         for key, value in asdict(self).items():
             if value is not None and key != 'drop':
@@ -38,37 +36,22 @@ class Column:
 
 class AdamSpec:
     """
-    ADaM Specification with automatic loading, merging, and validation
+    Load and validate ADaM specifications from YAML files with inheritance support.
     
-    Usage:
-        spec = AdamSpec(path="spec/adsl_study.yaml")
-        print(spec.domain)
-        print(spec.columns)
-        
     Attributes:
-        path: Path to the YAML file
-        domain: Dataset domain (e.g., 'ADSL', 'ADAE')
+        domain: Dataset domain (e.g., 'ADSL')
         key: List of key variables
         columns: List of Column objects
         parents: List of parent YAML files
-        
-    Properties:
-        is_valid: Whether the specification is valid
-        validation_errors: List of validation errors if any
     """
     
     def __init__(self, path: str | Path, schema_path: str | Path | None = None):
         """
-        Initialize and build complete specification from YAML file
+        Load YAML specification with automatic parent merging and validation.
         
         Args:
-            path: Path to the study YAML file
-            schema_path: Optional path to schema file for validation
-                        If not provided, will look for 'schema' field in the YAML spec
-            
-        Raises:
-            FileNotFoundError: If YAML file or parent files not found
-            ValueError: If YAML is invalid
+            path: Path to YAML specification file
+            schema_path: Optional schema for validation (defaults to spec's schema field)
         """
         self.path = Path(path)
         self.schema_path = Path(schema_path) if schema_path else None
@@ -81,13 +64,11 @@ class AdamSpec:
         self._raw_spec: dict = {}
         self._schema_results: list[ValidationResult] = []
         
-        # Build specification
         self._build_spec()
         
-        # Try to find schema path from spec if not provided
+        # Use schema from spec if not provided
         if not self.schema_path and 'schema' in self._raw_spec:
             schema_from_spec = self._raw_spec['schema']
-            # Resolve relative to the spec file's directory
             potential_schema_path = self.path.parent / schema_from_spec
             if potential_schema_path.exists():
                 self.schema_path = potential_schema_path
@@ -102,37 +83,32 @@ class AdamSpec:
             logger.warning(f"No schema found for {self.path.name} - validation skipped")
     
     def _build_spec(self) -> None:
-        """Build complete specification with inheritance"""
+        """Build specification with inheritance."""
         if not self.path.exists():
             raise FileNotFoundError(f"YAML file not found: {self.path}")
         
-        # Load study spec to get parents
         try:
             with open(self.path, 'r') as f:
                 study_spec = yaml.safe_load(f) or {}
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in {self.path}: {e}")
         
-        # Build list of all YAML files to merge
         yaml_files = self._collect_yaml_files(study_spec)
         
-        # Use merge_yaml function with appropriate strategy
         final_spec = merge_yaml(
             yaml_files,
             list_merge_strategy="merge_by_key",
             list_merge_keys={"columns": "name"}
         )
         
-        # Store raw spec and extract fields
         self._raw_spec = final_spec
         self._extract_fields(final_spec)
     
     def _collect_yaml_files(self, study_spec: dict) -> list[str]:
-        """Collect all YAML files to merge including parents"""
+        """Collect YAML files including parents."""
         yaml_files = []
         spec_dir = self.path.parent
         
-        # Add parent files if they exist
         if 'parents' in study_spec:
             self.parents = study_spec['parents'] if isinstance(study_spec['parents'], list) else [study_spec['parents']]
             
@@ -142,49 +118,41 @@ class AdamSpec:
                     raise FileNotFoundError(f"Parent file not found: {parent_path}")
                 yaml_files.append(str(parent_path))
         
-        # Add the study file itself (last, so it overrides)
-        yaml_files.append(str(self.path))
+        yaml_files.append(str(self.path))  # Study file last to override
         return yaml_files
     
     def _extract_fields(self, spec: dict) -> None:
-        """Extract fields from merged specification"""
-        # Extract standard fields
+        """Extract fields from merged specification."""
         self.domain = spec.get('domain', '')
         self.key = spec.get('key', [])
         
-        # Process columns
         raw_columns = spec.get('columns', [])
         processed_columns = self._process_columns(raw_columns)
         
         self.columns = []
         for col_dict in processed_columns:
             try:
-                # Ensure required fields
                 if 'type' not in col_dict:
                     self._errors.append(f"Column {col_dict.get('name', 'unknown')} missing required 'type' field")
                     continue
                     
-                # Create Column object
                 col = Column(**{k: v for k, v in col_dict.items() if k != 'drop'})
                 self.columns.append(col)
             except TypeError as e:
                 self._errors.append(f"Invalid column specification: {e}")
     
     def _process_columns(self, columns: list[dict]) -> list[dict]:
-        """Process columns, handling drop flags and defaults"""
+        """Process columns, handling drop flags."""
         result = []
         dropped_names = set()
         
-        # Collect dropped column names
         for col in columns:
             if col.get('drop', False):
                 dropped_names.add(col['name'])
                 logger.debug(f"Column marked for drop: {col['name']}")
         
-        # Return non-dropped columns
         for col in columns:
             if col.get('name') not in dropped_names and not col.get('drop', False):
-                # Ensure label defaults to name
                 if 'label' not in col or col['label'] is None:
                     col['label'] = col['name']
                 result.append(col)
@@ -192,12 +160,11 @@ class AdamSpec:
         return result
     
     def _validate_with_schema(self) -> None:
-        """Validate using SchemaValidator"""
+        """Validate specification against schema."""
         try:
             validator = SchemaValidator(self.schema_path)
             self._schema_results = validator.validate(self._raw_spec)
             
-            # Use SchemaValidator's built-in methods
             for error in validator.get_errors():
                 self._errors.append(f"[{error.rule}] {error.message}")
             
@@ -210,27 +177,20 @@ class AdamSpec:
             self._errors.append(f"Schema validation error: {e}")
 
     def to_dict(self, include_parents: bool = False) -> dict:
-        """
-        Convert to dictionary format
-        
-        Args:
-            include_parents: Whether to include parent files in output
-        """
+        """Convert to dictionary format."""
         result = deepcopy(self._raw_spec)
         
-        # Update with current values
         result["domain"] = self.domain
         result["key"] = self.key
         result["columns"] = [col.to_dict() for col in self.columns]
         
-        # Optionally remove parents
         if not include_parents:
             result.pop('parents', None)
         
         return result
     
     def to_yaml(self, include_parents: bool = False) -> str:
-        """Convert to YAML string"""
+        """Convert to YAML string."""
         return yaml.dump(
             self.to_dict(include_parents),
             default_flow_style=False,
@@ -238,13 +198,7 @@ class AdamSpec:
         )
     
     def save(self, output_path: str | Path) -> None:
-        """
-        Save specification to file
-        
-        Args:
-            output_path: Path to save file
-            format: Output format ('yaml', 'json')
-        """
+        """Save specification to YAML file."""
         output = Path(output_path)
         
         with open(output, 'w') as f:
@@ -257,23 +211,18 @@ class AdamSpec:
         Get column specifications.
         
         Args:
-            names: Optional column name(s) to retrieve specific column(s)
-                   Can be a single string or a list of strings
+            names: Column name(s) - string, list, or None for all
         
         Returns:
-            If names is a string: Column spec dict for that column, or None if not found
-            If names is a list: List of column spec dicts for those columns (skips not found)
-            If names is None: List of all column specification dictionaries
+            Single dict, list of dicts, or None if not found
         """
         if names is not None:
-            # Handle single name (string)
             if isinstance(names, str):
                 for col in self.columns:
                     if col.name == names:
                         return col.to_dict()
                 return None
             
-            # Handle multiple names (list)
             elif isinstance(names, list):
                 result = []
                 for name in names:
@@ -283,7 +232,6 @@ class AdamSpec:
                             break
                 return result
         
-        # Return all columns
         return [col.to_dict() for col in self.columns]
     
     def get_data_dependency(self) -> list[dict]:
