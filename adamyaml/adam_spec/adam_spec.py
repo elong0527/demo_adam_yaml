@@ -260,3 +260,28 @@ class AdamSpec:
                     })
         
         return dependencies
+    
+    @property
+    def sdtm_dir(self) -> str:
+        """
+        Get the SDTM directory path from specification.
+        
+        Returns:
+            Absolute path to SDTM directory
+            
+        Raises:
+            ValueError: If sdtm_dir is not specified in the specification
+        """
+        sdtm_dir = self._raw_spec.get('sdtm_dir')
+        
+        if not sdtm_dir:
+            raise ValueError(f"No sdtm_dir specified in {self.path}. This is a required field.")
+        
+        # Convert to Path for proper handling
+        sdtm_path = Path(sdtm_dir)
+        
+        # If relative path, resolve relative to spec file directory
+        if not sdtm_path.is_absolute():
+            sdtm_path = self.path.parent / sdtm_path
+            
+        return str(sdtm_path.resolve())

@@ -27,26 +27,15 @@ class AdamDerivation:
             spec_path: Path to YAML specification file
         """
         self.spec_path = Path(spec_path)
-        
-        # Load specification using AdamSpec
-        self.spec = AdamSpec(str(self.spec_path))
+        self.spec = AdamSpec(self.spec_path)
         
         # Check for validation errors
         if self.spec._errors:
             error_msg = "\n".join([f"  - {e}" for e in self.spec._errors])
             raise ValueError(f"Specification validation failed with {len(self.spec._errors)} errors:\n{error_msg}")
         
-        # Get sdtm_dir from spec
-        sdtm_dir = self.spec._raw_spec.get('sdtm_dir')
-        if sdtm_dir:
-            # Resolve relative paths relative to spec file directory
-            if not Path(sdtm_dir).is_absolute():
-                sdtm_dir = str(self.spec_path.parent / sdtm_dir)
-        else:
-            raise ValueError(f"No sdtm_dir specified in {spec_path}. This is a required field.")
-        
-        # Initialize SDTM loader  
-        self.sdtm_loader = SDTMLoader(sdtm_dir, self.spec)
+        # Initialize SDTM loader using sdtm_dir from spec
+        self.sdtm_loader = SDTMLoader(self.spec.sdtm_dir, self.spec)
         
         # Initialize logger
         self.logger = DerivationLogger(self.spec.domain)
