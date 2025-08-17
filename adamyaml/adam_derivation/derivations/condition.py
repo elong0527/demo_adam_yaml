@@ -2,7 +2,7 @@
 Conditional derivation with when/then/else logic
 """
 
-from typing import Dict, Any
+from typing import Any
 import polars as pl
 from .base import BaseDerivation, DerivationFactory
 
@@ -11,9 +11,9 @@ class ConditionalDerivation(BaseDerivation):
     """Derive values using conditional logic"""
     
     def derive(self, 
-               source_data: Dict[str, pl.DataFrame],
+               source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: Dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.Series:
         """
         Apply conditional derivation rules
         
@@ -104,7 +104,7 @@ class ConditionalDerivation(BaseDerivation):
         
         return result
     
-    def _build_condition_expr(self, expr_str: str, source_data: Dict[str, pl.DataFrame], target_df: pl.DataFrame):
+    def _build_condition_expr(self, expr_str: str, source_data: dict[str, pl.DataFrame], target_df: pl.DataFrame):
         """
         Build a Polars expression from condition string
         
@@ -161,7 +161,7 @@ class ConditionalDerivation(BaseDerivation):
         # Default to false
         return pl.lit(False)
     
-    def _get_derivation_value(self, spec: Dict[str, Any]):
+    def _get_derivation_value(self, spec: dict[str, Any]):
         """
         Get the value from a derivation specification
         

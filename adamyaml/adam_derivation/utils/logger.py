@@ -3,7 +3,7 @@ Logging utilities for ADaM derivation audit trail
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -18,7 +18,7 @@ class DerivationLog:
     error: str = None
     timestamp: datetime = field(default_factory=datetime.now)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "column": self.column,
             "method": self.method,
@@ -34,8 +34,8 @@ class DerivationLogger:
     
     def __init__(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.logs: List[DerivationLog] = []
-        self.errors: List[DerivationLog] = []
+        self.logs: list[DerivationLog] = []
+        self.errors: list[DerivationLog] = []
         
         # Setup standard logger
         self.logger = logging.getLogger(f"adam_derivation.{dataset_name}")
@@ -71,7 +71,7 @@ class DerivationLogger:
         self.errors.append(log_entry)
         self.logger.error(f"Failed to derive {column}: {error}")
     
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary of derivation process"""
         return {
             "dataset": self.dataset_name,

@@ -4,7 +4,7 @@ Main derivation engine for ADaM dataset generation using Polars
 
 import polars as pl
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 import logging
 
 from .loaders import SDTMLoader
@@ -145,7 +145,7 @@ class AdamDerivation:
         
         return target_df
     
-    def save_dataset(self, output_path: str, df: Optional[pl.DataFrame] = None):
+    def save_dataset(self, output_path: str, df: pl.DataFrame | None = None):
         """
         Save the derived dataset to parquet file
         
@@ -162,7 +162,7 @@ class AdamDerivation:
         df.write_parquet(output_path)
         self.python_logger.info(f"Dataset saved to {output_path}")
     
-    def get_derivation_log(self) -> Dict[str, Any]:
+    def get_derivation_log(self) -> dict[str, Any]:
         """
         Get the derivation log summary
         

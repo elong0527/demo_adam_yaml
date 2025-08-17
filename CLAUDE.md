@@ -33,11 +33,11 @@ demo_adam_yaml/
 ```
 
 ## Key Technologies
-- **Python 3.7+**: Core programming language
+- **Python 3.10+**: Core programming language with modern type hints
 - **PyYAML**: YAML parsing and generation
 - **Pathlib**: Modern path handling
 - **Dataclasses**: Structured data representation
-- **Type hints**: Static type checking support
+- **Type hints**: Modern Python 3.10+ syntax (using `|` for unions)
 - **unittest**: Built-in testing framework
 
 ## Module Features
@@ -201,6 +201,14 @@ find . -name "*.py" -exec grep -l "[^\x00-\x7F]" {} \;
 - Use hierarchical YAML structure for DRY principle
 - Follow CDISC naming conventions
 - Test all changes with unit tests
+
+### Modern Python Type Hints (Python 3.10+)
+- Use `str | None` instead of `Optional[str]`
+- Use `list[str]` instead of `List[str]`
+- Use `dict[str, Any]` instead of `Dict[str, Any]`
+- Use `tuple[int, str]` instead of `Tuple[int, str]`
+- Avoid importing from `typing` when built-in types work
+- Only import `Any`, `TYPE_CHECKING` from typing when needed
 
 ## API Summary
 

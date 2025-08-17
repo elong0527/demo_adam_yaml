@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 import tempfile
 import yaml
-from adam_spec import AdamSpec
+from adamyaml.adam_spec import AdamSpec
 
 
 class TestAdamSpec(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestAdamSpec(unittest.TestCase):
             # Fallback to relative path from tests directory
             self.test_dir = Path(__file__).parent.parent.parent.parent / "spec"
         
-        self.test_file = self.test_dir / "adsl_study.yaml"
+        self.test_file = self.test_dir / "adsl_study1.yaml"
     
     def test_load_spec(self):
         """Test basic loading of specification"""

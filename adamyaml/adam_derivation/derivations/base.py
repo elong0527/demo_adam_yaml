@@ -3,7 +3,7 @@ Base derivation class and factory
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple
+from typing import Any
 import polars as pl
 import logging
 
@@ -16,9 +16,9 @@ class BaseDerivation(ABC):
     
     @abstractmethod
     def derive(self, 
-               source_data: Dict[str, pl.DataFrame],
+               source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: Dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.Series:
         """
         Execute derivation for a single column
         
@@ -34,8 +34,8 @@ class BaseDerivation(ABC):
     
     def get_source_dataset(self, 
                           source_str: str, 
-                          source_data: Dict[str, pl.DataFrame],
-                          target_df: pl.DataFrame) -> Tuple[pl.DataFrame, str]:
+                          source_data: dict[str, pl.DataFrame],
+                          target_df: pl.DataFrame) -> tuple[pl.DataFrame, str]:
         """
         Parse source string and return dataset and column
         
@@ -59,7 +59,7 @@ class BaseDerivation(ABC):
     def apply_filter(self, 
                     df: pl.DataFrame,
                     filter_expr: str,
-                    source_data: Dict[str, pl.DataFrame]) -> pl.DataFrame:
+                    source_data: dict[str, pl.DataFrame]) -> pl.DataFrame:
         """
         Apply filter expression to dataframe using Polars
         
@@ -145,7 +145,7 @@ class DerivationFactory:
     """Factory to create appropriate derivation class"""
     
     @staticmethod
-    def get_derivation(column_spec: Dict[str, Any]) -> BaseDerivation:
+    def get_derivation(column_spec: dict[str, Any]) -> BaseDerivation:
         """
         Get appropriate derivation class based on column specification
         

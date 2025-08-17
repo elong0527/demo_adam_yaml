@@ -1,6 +1,6 @@
 import polars as pl
 from pathlib import Path
-from typing import Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import logging
 
 # Avoid circular import at runtime
@@ -24,7 +24,7 @@ class SDTMLoader:
             raise FileNotFoundError(f"SDTM directory not found: {sdtm_dir}")
         
         self.spec = spec
-        self._cache: Dict[str, pl.DataFrame] = {}
+        self._cache: dict[str, pl.DataFrame] = {}
         self.logger = logging.getLogger(__name__)
     
     def load_dataset(self, dataset_name: str) -> pl.DataFrame:
@@ -57,7 +57,7 @@ class SDTMLoader:
         
         return df
     
-    def load_datasets(self, dataset_names: list) -> Dict[str, pl.DataFrame]:
+    def load_datasets(self, dataset_names: list) -> dict[str, pl.DataFrame]:
         """
         Load multiple SDTM datasets
         
@@ -76,7 +76,7 @@ class SDTMLoader:
         
         return datasets
     
-    def get_required_datasets(self) -> Dict[str, pl.DataFrame]:
+    def get_required_datasets(self) -> dict[str, pl.DataFrame]:
         """Load all datasets required by the specification."""
         # Use AdamSpec's get_data_dependency method to get XX.YYYY patterns
         dependencies = self.spec.get_data_dependency()

@@ -3,7 +3,7 @@ Data validation for derived ADaM datasets using Polars
 """
 
 import polars as pl
-from typing import Dict, Any, List
+from typing import Any
 import logging
 
 
@@ -13,7 +13,7 @@ class DataValidator:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
-    def validate_dataset(self, df: pl.DataFrame, spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def validate_dataset(self, df: pl.DataFrame, spec: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Validate dataset against specification
         
@@ -49,7 +49,7 @@ class DataValidator:
         
         return results
     
-    def _validate_dataset_level(self, df: pl.DataFrame, spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _validate_dataset_level(self, df: pl.DataFrame, spec: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Validate dataset-level requirements
         
@@ -94,7 +94,7 @@ class DataValidator:
         
         return results
     
-    def _validate_column(self, series: pl.Series, col_spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _validate_column(self, series: pl.Series, col_spec: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Validate a single column
         

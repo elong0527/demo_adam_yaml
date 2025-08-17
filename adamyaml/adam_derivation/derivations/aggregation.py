@@ -2,7 +2,7 @@
 Aggregation-based derivation for summarizing multiple records
 """
 
-from typing import Dict, Any
+from typing import Any
 import polars as pl
 from .base import BaseDerivation
 
@@ -11,9 +11,9 @@ class AggregationDerivation(BaseDerivation):
     """Derive values using aggregation functions"""
     
     def derive(self, 
-               source_data: Dict[str, pl.DataFrame],
+               source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: Dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.Series:
         """
         Apply aggregation to derive values
         

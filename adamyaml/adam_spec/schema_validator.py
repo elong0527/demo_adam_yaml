@@ -1,7 +1,7 @@
 import re
 import yaml
 from pathlib import Path
-from typing import Dict, List, Any, Union
+from typing import Any
 from dataclasses import dataclass
 import logging
 
@@ -28,7 +28,7 @@ class SchemaValidator:
         results = validator.validate(spec_dict)
     """
     
-    def __init__(self, schema_path: Union[str, Path]):
+    def __init__(self, schema_path: str | Path):
         """
         Initialize with schema file
         
@@ -37,9 +37,9 @@ class SchemaValidator:
         """
         self.schema_path = Path(schema_path)
         self.schema = self._load_schema()
-        self.results: List[ValidationResult] = []
+        self.results: list[ValidationResult] = []
     
-    def _load_schema(self) -> Dict:
+    def _load_schema(self) -> dict:
         """Load schema from YAML file"""
         if not self.schema_path.exists():
             raise FileNotFoundError(f"Schema file not found: {self.schema_path}")
@@ -52,7 +52,7 @@ class SchemaValidator:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in schema file: {e}")
     
-    def validate(self, spec: Dict) -> List[ValidationResult]:
+    def validate(self, spec: dict) -> list[ValidationResult]:
         """
         Validate a specification against the schema
         
@@ -79,7 +79,7 @@ class SchemaValidator:
         
         return self.results
     
-    def _validate_root(self, spec: Dict) -> None:
+    def _validate_root(self, spec: dict) -> None:
         """Validate root-level requirements"""
         root_schema = self.schema.get('root', {})
         
@@ -104,7 +104,7 @@ class SchemaValidator:
                 logger.debug(f"Unknown root field: {field_name}")
                 # Not an error, just log it
     
-    def _validate_fields(self, spec: Dict) -> None:
+    def _validate_fields(self, spec: dict) -> None:
         """Validate individual root fields against their schemas"""
         fields_schema = self.schema.get('fields', {})
         
@@ -113,7 +113,7 @@ class SchemaValidator:
                 field_schema = fields_schema[field_name]
                 self._validate_field(field_name, field_value, field_schema)
     
-    def _validate_field(self, name: str, value: Any, schema: Dict) -> None:
+    def _validate_field(self, name: str, value: Any, schema: dict) -> None:
         """Validate a single field against its schema"""
         # Skip if value is None
         if value is None:
@@ -174,7 +174,7 @@ class SchemaValidator:
                     expected=schema['allowed_values']
                 ))
     
-    def _validate_list_field(self, name: str, items: List, schema: Dict) -> None:
+    def _validate_list_field(self, name: str, items: list, schema: dict) -> None:
         """Validate a list field"""
         # Min items validation
         min_items = schema.get('min_items', 0)
@@ -215,7 +215,7 @@ class SchemaValidator:
                         expected=item_type
                     ))
     
-    def _validate_columns(self, columns: List[Dict]) -> None:
+    def _validate_columns(self, columns: list[dict]) -> None:
         """Validate column specifications with updated schema rules"""
         column_schema = self.schema.get('column', {})
         required_fields = column_schema.get('required', [])
@@ -270,7 +270,7 @@ class SchemaValidator:
             ))
     
     def _validate_column_field(self, col_name: str, col_index: int,
-                               field_name: str, value: Any, schema: Dict) -> None:
+                               field_name: str, value: Any, schema: dict) -> None:
         """Validate a single column field"""
         field_path = f"columns[{col_index}].{field_name}"
         
@@ -355,7 +355,7 @@ class SchemaValidator:
             self._validate_nested_fields(col_name, col_index, field_name, value, schema['fields'])
     
     def _validate_nested_fields(self, col_name: str, col_index: int,
-                                parent_field: str, value: Dict, fields_schema: Dict) -> None:
+                                parent_field: str, value: dict, fields_schema: dict) -> None:
         """Validate nested fields within a column field (e.g., derivation, validation)"""
         for sub_field, sub_value in value.items():
             if sub_field in fields_schema:
@@ -374,7 +374,7 @@ class SchemaValidator:
                             expected=sub_schema['type']
                         ))
     
-    def _apply_custom_rules(self, spec: Dict) -> None:
+    def _apply_custom_rules(self, spec: dict) -> None:
         """Apply custom validation rules"""
         # Rule 1: Key variables must exist in columns
         self._validate_key_variables_exist(spec)
@@ -385,7 +385,7 @@ class SchemaValidator:
         # Rule 3: Valid derivation (must have source, function, or constant)
         self._validate_derivations(spec.get('columns', []))
     
-    def _validate_key_variables_exist(self, spec: Dict) -> None:
+    def _validate_key_variables_exist(self, spec: dict) -> None:
         """Validate that all key variables exist as columns"""
         key_vars = spec.get('key', [])
         if not key_vars:
@@ -404,7 +404,7 @@ class SchemaValidator:
                     expected=f"Must be one of: {sorted(column_names)}"
                 ))
     
-    def _validate_type_consistency(self, columns: List[Dict]) -> None:
+    def _validate_type_consistency(self, columns: list[dict]) -> None:
         """Validate that validation rules match column types"""
         for i, col in enumerate(columns):
             col_type = col.get('type')
@@ -450,7 +450,7 @@ class SchemaValidator:
                         expected="Use max_length for string length validation"
                     ))
     
-    def _validate_derivations(self, columns: List[Dict]) -> None:
+    def _validate_derivations(self, columns: list[dict]) -> None:
         """Validate derivation specifications"""
         for i, col in enumerate(columns):
             derivation = col.get('derivation')
@@ -473,7 +473,7 @@ class SchemaValidator:
                     expected=f"At least one of: {required_keys}"
                 ))
     
-    def _check_type(self, value: Any, expected_type: Union[str, List[str]]) -> bool:
+    def _check_type(self, value: Any, expected_type: str | list[str]) -> bool:
         """Check if value matches expected type(s)"""
         if isinstance(expected_type, list):
             return any(self._check_type(value, t) for t in expected_type)
@@ -491,15 +491,15 @@ class SchemaValidator:
         expected_class = type_map.get(expected_type, object)
         return isinstance(value, expected_class)
     
-    def get_errors(self) -> List[ValidationResult]:
+    def get_errors(self) -> list[ValidationResult]:
         """Get only error-level results"""
         return [r for r in self.results if r.severity == 'error']
     
-    def get_warnings(self) -> List[ValidationResult]:
+    def get_warnings(self) -> list[ValidationResult]:
         """Get only warning-level results"""
         return [r for r in self.results if r.severity == 'warning']
     
-    def get_info(self) -> List[ValidationResult]:
+    def get_info(self) -> list[ValidationResult]:
         """Get only info-level results"""
         return [r for r in self.results if r.severity == 'info']
     

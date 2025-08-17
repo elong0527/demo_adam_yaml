@@ -2,7 +2,7 @@
 Source mapping derivation with optional value recoding
 """
 
-from typing import Dict, Any
+from typing import Any
 import polars as pl
 from .base import BaseDerivation
 
@@ -11,9 +11,9 @@ class SourceDerivation(BaseDerivation):
     """Direct source mapping with optional value mapping"""
     
     def derive(self, 
-               source_data: Dict[str, pl.DataFrame],
+               source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: Dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.Series:
         """
         Map values from source with optional recoding
         
