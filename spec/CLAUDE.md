@@ -99,7 +99,7 @@ adsl_spec2.save("spec/adsl_study_combined2.yaml")
   - Temporal: first, last, closest (to reference date)
   - Custom: user-defined functions
 - Handle missing/partial data per rules
-- Example: `WEIGHT from VS where VSTESTCD="WEIGHT" that before and closet to start date`
+- Example: `WEIGHT from VS where VSTESTCD="WEIGHT" that before and closest to start date`
 
 ### Method 6: Conditional/Derived Logic
 **Use Case**: Complex business rules and calculations
