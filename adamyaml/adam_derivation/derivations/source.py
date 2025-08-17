@@ -43,25 +43,42 @@ class SourceDerivation(BaseDerivation):
         if source_col not in source_df.columns:
             raise ValueError(f"Column {source_col} not found in source dataset")
         
-        # For subject-level data, merge on USUBJID
-        if "USUBJID" in source_df.columns and "USUBJID" in target_df.columns:
-            # Join on USUBJID to align records
-            merge_df = target_df.select(["USUBJID"]).join(
-                source_df.select(["USUBJID", source_col]),
-                on="USUBJID",
-                how="left"
-            )
-            result = merge_df[source_col]
-        elif target_df.height == 0:
+        # Determine join keys - try to find common key columns
+        if target_df.height > 0:
+            # Find common columns that could be used as keys
+            common_cols = set(source_df.columns) & set(target_df.columns)
+            # Prefer USUBJID if available, otherwise use any common columns
+            join_keys = []
+            if "USUBJID" in common_cols:
+                join_keys = ["USUBJID"]
+            elif common_cols:
+                # Use other common columns as join keys
+                join_keys = list(common_cols)
+                self.logger.info(f"Joining on columns: {join_keys}")
+            
+            if join_keys:
+                # Perform left join to maintain target dataset structure
+                cols_to_select = join_keys + [source_col]
+                # Remove duplicates from cols_to_select
+                cols_to_select = list(dict.fromkeys(cols_to_select))
+                
+                merge_df = target_df.select(join_keys).join(
+                    source_df.select(cols_to_select),
+                    on=join_keys,
+                    how="left"
+                )
+                result = merge_df[source_col]
+            else:
+                # No common keys - fall back to position-based mapping
+                self.logger.warning("No common key columns found for joining, using position-based mapping")
+                if source_df.height != target_df.height:
+                    self.logger.warning(f"Source and target have different lengths, using first {target_df.height} records")
+                    result = source_df[source_col].head(target_df.height)
+                else:
+                    result = source_df[source_col]
+        else:
             # If target is empty, just get the column
             result = source_df[source_col]
-        else:
-            # Direct mapping if same length
-            if source_df.height != target_df.height:
-                self.logger.warning(f"Source and target have different lengths, using first {target_df.height} records")
-                result = source_df[source_col].head(target_df.height)
-            else:
-                result = source_df[source_col]
         
         # Apply value mapping if specified
         mapping = derivation.get("mapping")

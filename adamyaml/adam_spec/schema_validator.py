@@ -409,6 +409,9 @@ class SchemaValidator:
         
         # Rule 3: Valid derivation (must have source, function, or constant)
         self._validate_derivations(spec.get('columns', []))
+        
+        # Rule 4: Key variables must follow strict rules
+        self._validate_key_variable_rules(spec)
     
     def _validate_key_variables_exist(self, spec: dict) -> None:
         """Validate that all key variables exist as columns"""
@@ -497,6 +500,79 @@ class SchemaValidator:
                     value=list(derivation.keys()),
                     expected=f"At least one of: {required_keys}"
                 ))
+    
+    def _validate_key_variable_rules(self, spec: dict) -> None:
+        """Validate that key variables follow strict rules"""
+        key_vars = spec.get('key', [])
+        if not key_vars:
+            return
+        
+        columns = spec.get('columns', [])
+        source_datasets = set()
+        
+        for key_var in key_vars:
+            # Find the column specification for this key variable
+            col_spec = None
+            for col in columns:
+                if col.get('name') == key_var:
+                    col_spec = col
+                    break
+            
+            if not col_spec:
+                continue  # Already reported by _validate_key_variables_exist
+            
+            derivation = col_spec.get('derivation', {})
+            
+            # Rule 1: Key variables must use source derivation only
+            if 'source' not in derivation:
+                self.results.append(ValidationResult(
+                    field=f'key.{key_var}',
+                    rule='key_variable_source_only',
+                    severity='error',
+                    message=f"Key variable '{key_var}' must use 'source' derivation only",
+                    value=list(derivation.keys()),
+                    expected='source'
+                ))
+                continue
+            
+            if len(derivation) > 1:
+                # Check if there are other derivation types besides source
+                other_keys = set(derivation.keys()) - {'source'}
+                if other_keys:
+                    self.results.append(ValidationResult(
+                        field=f'key.{key_var}',
+                        rule='key_variable_source_only',
+                        severity='error',
+                        message=f"Key variable '{key_var}' must use only 'source' derivation, found additional: {other_keys}",
+                        value=list(derivation.keys()),
+                        expected='source only'
+                    ))
+            
+            # Rule 2: Track source datasets
+            source_str = derivation.get('source', '')
+            if '.' in source_str:
+                dataset_name = source_str.split('.', 1)[0]
+                source_datasets.add(dataset_name)
+            else:
+                self.results.append(ValidationResult(
+                    field=f'key.{key_var}.derivation.source',
+                    rule='invalid_source_format',
+                    severity='error',
+                    message=f"Key variable '{key_var}' source must be in format 'DATASET.COLUMN'",
+                    value=source_str,
+                    expected='DATASET.COLUMN'
+                ))
+        
+        # Rule 3: All key variables must come from the same dataset
+        if len(source_datasets) > 1:
+            self.results.append(ValidationResult(
+                field='key',
+                rule='key_variables_same_dataset',
+                severity='error',
+                message=f"All key variables must come from the same source dataset",
+                value=list(source_datasets),
+                expected='Single source dataset'
+            ))
     
     def _check_type(self, value: Any, expected_type: str | list[str]) -> bool:
         """Check if value matches expected type(s)"""

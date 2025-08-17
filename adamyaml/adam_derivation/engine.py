@@ -44,69 +44,125 @@ class AdamDerivation:
         # Initialize validator
         self.validator = DataValidator()
     
-    def build(self) -> pl.DataFrame:
-        """
-        Main method to derive the ADaM dataset
+    def _build_keys(self) -> pl.DataFrame:
+        """Build base dataset with key variables."""
+        key_vars = self.spec.key
+        self.python_logger.info(f"Building base dataset with key variables: {key_vars}")
         
-        Returns:
-            DataFrame containing the derived ADaM dataset
-        """
+        dependencies = self.spec.get_data_dependency()
+        key_deps = [dep for dep in dependencies if dep['adam_variable'] in key_vars]
+        
+        source_dataset = key_deps[0]['sdtm_data']
+        key_columns_map = {
+            dep['adam_variable']: dep['sdtm_variable'] 
+            for dep in key_deps
+        }
+        
+        source_df = self.sdtm_loader.load_dataset(source_dataset)
+        self.python_logger.info(f"Using source dataset {source_dataset}")
+        
+        columns_to_select = list(key_columns_map.values())
+        base_df = source_df.select(columns_to_select)
+        
+        rename_map = {source_col: key_var 
+                      for key_var, source_col in key_columns_map.items() 
+                      if source_col != key_var}
+        if rename_map:
+            base_df = base_df.rename(rename_map)
+            self.python_logger.info(f"Renamed columns: {rename_map}")
+        
+        # Check for duplicates
+        n_rows = base_df.height
+        n_unique = base_df.unique(subset=key_vars).height
+        
+        if n_rows != n_unique:
+            n_duplicates = n_rows - n_unique
+            self.python_logger.error(
+                f"ERROR: Found {n_duplicates} duplicate key combinations. "
+                f"Total: {n_rows}, Unique: {n_unique}"
+            )
+            self.logger.log_error(
+                column=", ".join(key_vars),
+                method="_build_keys",
+                error=f"Duplicate key combinations: {n_duplicates} duplicates"
+            )
+            
+            duplicated = base_df.filter(
+                base_df.select(key_vars).is_duplicated()
+            ).head(5)
+            self.python_logger.error(f"Sample duplicates:\n{duplicated}")
+            
+            base_df = base_df.unique(subset=key_vars, keep="first")
+            self.python_logger.warning(f"Continuing with {base_df.height} unique records")
+        else:
+            self.python_logger.info(f"Base dataset has {base_df.height} unique rows")
+        
+        return base_df
+    
+    def build(self) -> pl.DataFrame:
+        """Build the ADaM dataset."""
         self.python_logger.info(f"Starting derivation for {self.spec.domain}")
         
-        # Get required datasets from spec and load them
         dependencies = self.spec.get_data_dependency()
         required_datasets = list(set(dep['sdtm_data'] for dep in dependencies))
-        
-        # Filter out self-references
         required_datasets = [ds for ds in required_datasets if ds != self.spec.domain]
         
-        # Load required SDTM datasets
         source_data = self.sdtm_loader.load_datasets(required_datasets)
         self.python_logger.info(f"Loaded {len(source_data)} source datasets: {list(source_data.keys())}")
         
-        # Initialize target dataset as empty DataFrame
-        target_df = pl.DataFrame()
-        
-        # Get column specifications
         columns = self.spec.get_column_specs()
         
-        # Process each column
+        # Build base dataset with key variables
+        key_vars = self.spec.key
+        if key_vars:
+            target_df = self._build_keys()
+            key_columns_derived = key_vars
+        else:
+            self.python_logger.warning("No key variables defined")
+            target_df = pl.DataFrame()
+            key_columns_derived = []
+        
         for col_spec in columns:
             col_name = col_spec.get("name")
             
-            # Skip dropped columns
+            if col_name in key_columns_derived:
+                continue
+            
             if col_spec.get("drop", False):
                 self.python_logger.info(f"Skipping dropped column: {col_name}")
                 continue
             
             try:
-                # Get appropriate derivation class
                 derivation_obj = DerivationFactory.get_derivation(col_spec)
-                
-                # Derive the column
                 self.python_logger.info(f"Deriving {col_name} using {derivation_obj.__class__.__name__}")
                 derived_values = derivation_obj.derive(source_data, target_df, col_spec)
                 
-                # Add to target dataset
                 if target_df.height == 0:
-                    # First column - initialize DataFrame
                     target_df = pl.DataFrame({col_name: derived_values})
                 else:
-                    # Add column to existing DataFrame
+                    if isinstance(derived_values, pl.Series):
+                        if len(derived_values) != target_df.height:
+                            self.python_logger.warning(
+                                f"Column {col_name}: {len(derived_values)} values, target: {target_df.height} rows"
+                            )
+                            if len(derived_values) < target_df.height:
+                                padding = [None] * (target_df.height - len(derived_values))
+                                derived_values = pl.concat([derived_values, pl.Series(padding)])
+                            else:
+                                derived_values = derived_values[:target_df.height]
+                    
                     target_df = target_df.with_columns(derived_values.alias(col_name))
                 
-                # Log successful derivation
                 derivation_info = col_spec.get("derivation", {})
                 source = derivation_info.get("source", derivation_info.get("constant", "custom"))
                 self.logger.log_derivation(
                     column=col_name,
                     method=derivation_obj.__class__.__name__,
                     source=source,
-                    records=len(derived_values)
+                    records=target_df.height if target_df.height > 0 else len(derived_values)
                 )
                 
             except Exception as e:
-                # Log error but continue
                 self.python_logger.error(f"Failed to derive {col_name}: {e}")
                 self.logger.log_error(
                     column=col_name,
@@ -114,11 +170,9 @@ class AdamDerivation:
                     error=str(e)
                 )
                 
-                # Add empty column to maintain structure
                 if target_df.height > 0:
                     target_df = target_df.with_columns(pl.lit(None).alias(col_name))
         
-        # Validate the dataset
         self.python_logger.info("Validating derived dataset")
         validation_results = self.validator.validate_dataset(target_df, self.spec.to_dict())
         
@@ -132,44 +186,27 @@ class AdamDerivation:
             elif result["status"] == "warning":
                 self.python_logger.warning(result["message"])
         
-        # Report summary
         summary = self.logger.get_summary()
-        self.python_logger.info(f"Derivation complete: {summary['columns_derived']} columns derived, {summary['errors']} errors")
+        self.python_logger.info(f"Derivation complete: {summary['columns_derived']} columns, {summary['errors']} errors")
         
         if self.logger.has_errors():
-            self.python_logger.warning("Derivation completed with errors. Check logs for details.")
+            self.python_logger.warning("Completed with errors")
         
         return target_df
     
     def save(self) -> Path:
-        """
-        Build and save the derived dataset to parquet file in the adam directory.
-        Uses the domain name as the filename.
-        
-        Returns:
-            Path to the saved file
-        """
-        # Build the dataset
+        """Save dataset to parquet file."""
         df = self.build()
         
-        # Get output directory from spec
         adam_dir = Path(self.spec.adam_dir)
         adam_dir.mkdir(parents=True, exist_ok=True)
         
-        # Use domain name as filename
-        filename = f"{self.spec.domain.lower()}.parquet"
-        output_path = adam_dir / filename
-        
+        output_path = adam_dir / f"{self.spec.domain.lower()}.parquet"
         df.write_parquet(output_path)
-        self.python_logger.info(f"Dataset saved to {output_path}")
+        self.python_logger.info(f"Saved to {output_path}")
         
         return output_path
     
     def get_derivation_log(self) -> dict[str, Any]:
-        """
-        Get the derivation log summary
-        
-        Returns:
-            Dictionary containing derivation log
-        """
+        """Get derivation log summary."""
         return self.logger.get_summary()
