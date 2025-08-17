@@ -236,27 +236,20 @@ class AdamSpec:
     
     def get_data_dependency(self) -> list[dict]:
         """
-        Extract SDTM data dependencies from the specification.
+        Extract SDTM data dependencies.
         
         Returns:
-            List of dictionaries with keys:
-            - adam_variable: ADaM variable name
-            - sdtm_data: SDTM dataset name
-            - sdtm_variable: SDTM variable name
+            List of dicts with adam_variable, sdtm_data, sdtm_variable
         """
-        # Pattern for dataset.variable references
         pattern = re.compile(r'\b([A-Z][A-Z0-9_]{0,19})\.([A-Z][A-Z0-9_]{0,19})\b')
         
         dependencies = []
-        seen = set()  # Track unique combinations
+        seen = set()
         
-        # Search each column for dataset.variable patterns
         for column in self.columns:
-            # Find all matches in column dictionary
             matches = pattern.findall(str(column.to_dict()))
             
             for sdtm_data, sdtm_variable in matches:
-                # Create unique key for deduplication
                 key = (column.name, sdtm_data, sdtm_variable)
                 if key not in seen:
                     seen.add(key)
