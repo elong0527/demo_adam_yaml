@@ -4,21 +4,33 @@
 - **Use ASCII characters only** - No emojis or special Unicode characters in code or commits
 
 ## Project Overview
-This project provides a Python module for handling YAML-based specifications for ADaM (Analysis Data Model) datasets in clinical trials, following CDISC standards.
+This project provides two complementary Python modules for ADaM (Analysis Data Model) dataset generation in clinical trials:
+1. **adam_yaml**: YAML specification consolidation and validation
+2. **adam_derivation**: Dataset generation engine with simplified derivation architecture
 
 ## Project Structure
 ```
 demo_adam_yaml/
-+-- src/
-|   +-- adam_spec/           # Main specification module
++-- adamyaml/
+|   +-- adam_spec/           # YAML specification module
+|   |   +-- __init__.py
+|   |   +-- adam_spec.py     # Core specification class
+|   |   +-- merge_yaml.py    # YAML merging utilities
+|   |   +-- schema_validator.py  # Schema validation
+|   |   +-- tests/           # Unit tests
+|   +-- adam_derivation/     # Derivation engine module
 |       +-- __init__.py
-|       +-- adam_spec.py     # Core specification class
-|       +-- merge_yaml.py    # YAML merging utilities
-|       +-- schema_validator.py  # Schema validation
-|       +-- tests/           # Unit tests
-|           +-- test_adam_spec.py
-|           +-- test_merge_yaml.py
-|           +-- test_schema_validator.py
+|       +-- engine.py        # Simplified orchestration engine
+|       +-- loaders/
+|       |   +-- sdtm_loader.py  # SDTM data loader with column renaming
+|       +-- derivations/
+|           +-- base.py      # Base class and factory
+|           +-- source.py    # Direct source mapping
+|           +-- constant.py  # Constant values
+|           +-- aggregation.py  # Aggregation functions
+|           +-- custom.py    # Custom functions
+|           +-- categorization.py  # Cut-based categories
+|           +-- condition.py  # Conditional logic
 +-- spec/                    # YAML specifications
 |   +-- adsl_common.yaml    # Common variables
 |   +-- adsl_project.yaml   # Project-level specs
@@ -27,85 +39,97 @@ demo_adam_yaml/
 +-- data/                    # CDISC pilot study data
 |   +-- sdtm/               # SDTM datasets (22 files)
 |   +-- adam/               # ADaM datasets (10 files)
-+-- run_tests.py            # Test runner script
-+-- README_adam_spec.md     # Module documentation
-+-- CODE_REVIEW.md          # Code review findings
 ```
 
 ## Key Technologies
 - **Python 3.10+**: Core programming language with modern type hints
+- **Polars**: High-performance DataFrame library for data processing
 - **PyYAML**: YAML parsing and generation
 - **Pathlib**: Modern path handling
 - **Dataclasses**: Structured data representation
 - **Type hints**: Modern Python 3.10+ syntax (using `|` for unions)
 - **unittest**: Built-in testing framework
 
+## Module Architecture
+
+### Design Principles
+1. **Simplified Architecture**: Minimal abstraction layers, direct operations
+2. **Column Renaming Strategy**: Source columns renamed to `{DOMAIN}.{column}` format
+3. **Unified Derivation Interface**: All derivations return DataFrames directly
+4. **No Complex Joins**: One row per key combination principle
+5. **Clear Separation**: Specification handling vs. data processing
+6. **Efficient Caching**: Source data loaded once with renaming, reused throughout
+
 ## Module Features
 
-### 1. AdamSpec Class
-- Load and merge hierarchical YAML specifications
-- Automatic parent file inheritance
-- Schema-based validation
-- Multiple export formats (YAML, JSON, dict)
-- Column management and access methods
+### 1. adam_yaml Module (Specification Handling)
+- **AdamSpec Class**: Load and merge hierarchical YAML specifications
+- **merge_yaml Function**: Generic YAML merging with strategies
+- **SchemaValidator Class**: Pattern and type validation
+- **Export Formats**: YAML, JSON, dictionary
 
-### 2. merge_yaml Function
-- General-purpose YAML merging
-- Multiple merge strategies (replace, append, merge_by_key)
-- Deep merging support
-- Column-specific merge handling
+### 2. adam_derivation Module (Data Processing)
 
-### 3. SchemaValidator Class
-- Pattern-based validation (regex)
-- Type checking
-- Required field validation
-- Cross-field validation rules
-- Detailed error reporting
+#### Simplified Engine (engine.py)
+```python
+class AdamDerivation:
+    def __init__(self, spec_path: str):
+        self.spec = AdamSpec(spec_path)
+        self.sdtm_loader = SDTMLoader(self.spec.sdtm_dir)
+        self.target_df = pl.DataFrame()
+        self.source_data = {}
+    
+    def _derive_column(self, col_spec: dict[str, Any]) -> None:
+        derivation_obj = DerivationFactory.get_derivation(col_spec)
+        self.target_df = derivation_obj.derive(self.source_data, self.target_df, col_spec)
+```
+
+#### Key Components
+- **SDTMLoader**: Handles data loading with automatic column renaming
+- **BaseDerivation**: Abstract base with unified `derive()` method returning DataFrames
+- **DerivationFactory**: Simple dispatch to derivation classes
+- **Derivation Types**: Source, Constant, Aggregation, Custom, Categorization, Conditional
+
+#### Column Renaming Strategy
+- Source columns automatically renamed to `{DOMAIN}.{column}` format
+- Key variables preserved without renaming
+- Eliminates need for complex joining logic
 
 ## Usage Examples
 
-### Basic Usage
+### Specification Handling (adam_yaml)
 ```python
-from adam_spec import AdamSpec
+from adamyaml.adam_spec import AdamSpec
 
-# Load specification with schema validation
+# Load and validate specification
 spec = AdamSpec("spec/adsl_study.yaml", schema_path="spec/schema.yaml")
-
-# Access specification data
 print(spec.domain)  # "ADSL"
-print(spec.key)     # ['DOMAIN', 'USUBJID']
-print(len(spec.columns))  # Number of columns
-
-# Get specific column
-usubjid = spec.get_column("USUBJID")
-print(usubjid.type)   # "str"
-print(usubjid.label)  # "Unique Subject Identifier"
+print(spec.key)     # ['USUBJID', 'SUBJID']
 ```
 
-### YAML Merging
+### Dataset Generation (adam_derivation)
 ```python
-from adam_spec import merge_yaml
+from adamyaml.adam_derivation import AdamDerivation
 
-# Merge multiple YAML files
-merged = merge_yaml(
-    paths=["base.yaml", "override.yaml"],
-    list_merge_strategy="merge_by_key",
-    list_merge_keys={"columns": "name"}
-)
+# Create engine and build dataset
+engine = AdamDerivation("spec/adsl_study.yaml")
+adam_df = engine.build()
+print(f"Generated {adam_df.height} rows, {adam_df.width} columns")
 ```
 
-### Schema Validation
+### How Column Renaming Works
 ```python
-from adam_spec import SchemaValidator
+# Original SDTM data:
+# DM dataset: USUBJID, AGE, SEX, ...
+# VS dataset: USUBJID, VSTESTCD, VSORRES, ...
 
-validator = SchemaValidator("spec/schema.yaml")
-results = validator.validate(spec_dict)
+# After loading with rename_columns=True:
+# DM: USUBJID, DM.AGE, DM.SEX, ...
+# VS: USUBJID, VS.VSTESTCD, VS.VSORRES, ...
 
-if validator.is_valid():
-    print("Specification is valid")
-else:
-    for error in validator.get_errors():
-        print(f"ERROR: {error.message}")
+# In YAML specification:
+derivation:
+  source: DM.AGE  # References renamed column
 ```
 
 ## YAML Specification Structure
