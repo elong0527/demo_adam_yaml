@@ -1,8 +1,7 @@
 domain: ADSL
 key:
-- DOMAIN
 - USUBJID
-schema: schema.yaml
+schema: ../schema.yaml
 columns:
 - name: DOMAIN
   type: str
@@ -119,4 +118,6 @@ columns:
     weight: WEIGHT
   validation:
     maximum_missing_percentage: 5
-sdtm_dir: ../data/sdtm
+dir:
+  sdtm: ../data/sdtm
+  adam: ../data/adam_study1

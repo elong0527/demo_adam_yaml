@@ -1,6 +1,6 @@
 domain: ADSL
 key: [USUBJID]
-schema: schema.yaml
+schema: ../schema.yaml
 
 columns: 
 
