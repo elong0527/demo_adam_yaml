@@ -1,19 +1,6 @@
-"""Derivation implementations for ADaM variables."""
+"""Minimal derivation module for ADaM dataset generation."""
 
-from .base import BaseDerivation
-from .constant import ConstantDerivation
-from .source import SourceDerivation
-from .aggregation import AggregationDerivation
-from .categorization import CategorizationDerivation
-from .condition import ConditionalDerivation
-from .custom import CustomDerivation
+from .sql_derivation import SQLDerivation
+from .function_derivation import FunctionDerivation
 
-__all__ = [
-    "BaseDerivation",
-    "ConstantDerivation",
-    "SourceDerivation",
-    "AggregationDerivation",
-    "CategorizationDerivation",
-    "ConditionalDerivation",
-    "CustomDerivation"
-]
+__all__ = ["SQLDerivation", "FunctionDerivation"]

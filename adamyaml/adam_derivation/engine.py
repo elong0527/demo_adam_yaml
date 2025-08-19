@@ -89,33 +89,27 @@ class AdamDerivation:
         """Get appropriate derivation class based on specification."""
         derivation = col_spec.get("derivation", {})
         
-        # Simple dispatch based on derivation keys
-        if "constant" in derivation:
-            from .derivations.constant import ConstantDerivation
-            return ConstantDerivation()
-        elif "function" in derivation:
-            from .derivations.custom import CustomDerivation
-            return CustomDerivation()
-        elif "aggregation" in derivation:
-            from .derivations.aggregation import AggregationDerivation
-            return AggregationDerivation()
-        elif "source" in derivation:
-            from .derivations.source import SourceDerivation
-            return SourceDerivation()
-        elif "condition" in derivation:
-            from .derivations.condition import ConditionalDerivation
-            return ConditionalDerivation()
-        elif "cut" in derivation:
-            from .derivations.categorization import CategorizationDerivation
-            return CategorizationDerivation()
+        # Determine which derivation to use
+        # Function derivation handles custom functions
+        if "function" in derivation:
+            from .derivations import FunctionDerivation
+            return FunctionDerivation()
+        # Everything else can be handled by SQL derivation
         else:
-            raise ValueError(f"Unknown derivation type for {col_spec.get('name')}: {derivation}")
+            from .derivations import SQLDerivation
+            return SQLDerivation()
     
     def _derive_column(self, col_spec: dict[str, Any]) -> None:
         """Derive a single column."""
+        # Add key variables to column spec for derivations to use
+        col_spec['_key_vars'] = self.spec.key or ["USUBJID"]
+        
         derivation_obj = self._get_derivation(col_spec)
         self.logger.info(f"Deriving {col_spec['name']} using {derivation_obj.__class__.__name__}")
-        self.target_df = derivation_obj.derive(self.source_data, self.target_df, col_spec)
+        
+        # New derivations return a Series, add it to target_df
+        derived_series = derivation_obj.derive(col_spec, self.source_data, self.target_df)
+        self.target_df = self.target_df.with_columns(derived_series.alias(col_spec['name']))
     
     
     def build(self) -> pl.DataFrame:
