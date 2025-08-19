@@ -3,8 +3,8 @@ parents:
   - ../project/adsl_project.yaml
 
 dir: 
-  sdtm: "../data/sdtm"
-  adam: "../data/adam_study2"
+  sdtm: "../../data/sdtm"
+  adam: "../../data/adam_study2"
   
 columns:
 

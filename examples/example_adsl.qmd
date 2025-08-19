@@ -37,8 +37,26 @@ from adamyaml.adam_derivation.engine import AdamDerivation
 ```
 
 ```{python}
-adsl_derivation = AdamDerivation("../spec/study1/adsl_study1.yaml")
+dev = AdamDerivation("../spec/study1/adsl_study1.yaml")
 ```
+
+## Build key dataset 
+
+- building a dataset that has one row per key variables combination.
+
+```{python}
+dev._build_keys().head()
+```
+
+## Add a column 
+
+- based on column specification, derive a dataset that has 
+  + step 1: rename the source dataset to `{domain}.{name}` except key variables 
+  + step 2: keep key variables from source data
+  + step 3: derive the column 
+  + step 4: left join into the target df. 
+
+
 
 ## Load SDTM datasets
 ```{python}
