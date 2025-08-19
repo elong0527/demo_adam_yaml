@@ -1,4 +1,5 @@
 reactable>=0.1.5
 jupyter>=1.0.0
+ipykernel>=6.0.0
 quartodoc>=0.7.0
 polars>=0.20.0
