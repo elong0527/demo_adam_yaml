@@ -33,17 +33,17 @@ class SourceDerivation(BaseDerivation):
         if not source_str:
             raise ValueError(f"No source specified for {column_spec.get('name')}")
         
-        # Get source dataset and column
-        source_df, source_col = self.get_source_dataset(source_str, source_data, target_df)
+        # Find the DataFrame containing the source column
+        source_df = self.find_column(source_str, source_data, target_df)
         
         # Apply filter if specified
         filter_expr = derivation.get("filter", "")
         if filter_expr:
             source_df = self.apply_filter(source_df, filter_expr, source_data)
         
-        # Get the source values
-        if source_col not in source_df.columns:
-            raise ValueError(f"Column {source_col} not found in source dataset")
+        # Verify column exists
+        if source_str not in source_df.columns:
+            raise ValueError(f"Column {source_str} not found in source dataset")
         
         # Get key columns from target
         key_cols = []
@@ -56,7 +56,7 @@ class SourceDerivation(BaseDerivation):
         
         if key_cols and target_df.height > 0:
             # Join to ensure alignment with target keys
-            cols_to_select = key_cols + [source_col]
+            cols_to_select = key_cols + [source_str]
             cols_to_select = list(dict.fromkeys(cols_to_select))  # Remove duplicates
             
             # Left join to maintain target structure
@@ -65,10 +65,10 @@ class SourceDerivation(BaseDerivation):
                 on=key_cols,
                 how="left"
             )
-            result = result_df[source_col]
+            result = result_df[source_str]
         else:
             # Direct extraction if no target yet
-            result = source_df[source_col]
+            result = source_df[source_str]
         
         # Apply value mapping if specified
         mapping = derivation.get("mapping")

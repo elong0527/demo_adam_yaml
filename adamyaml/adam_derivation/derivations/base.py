@@ -29,31 +29,32 @@ class BaseDerivation(ABC):
         """
         pass
     
-    def get_source_dataset(self, 
-                          source_str: str, 
-                          source_data: dict[str, pl.DataFrame],
-                          target_df: pl.DataFrame) -> tuple[pl.DataFrame, str]:
+    def find_column(self, 
+                   column_name: str, 
+                   source_data: dict[str, pl.DataFrame],
+                   target_df: pl.DataFrame) -> pl.DataFrame:
         """
-        Parse source string and return dataset and column.
-        With renamed columns, the column name is already in DATASET.COLUMN format.
+        Find which DataFrame contains the specified column.
         
         Args:
-            source_str: Source string (e.g., "DM.AGE" or "AGE")
-            source_data: Dictionary of source datasets (with renamed columns)
+            column_name: Column name to find (e.g., "DM.AGE" or "AGE")
+            source_data: Dictionary of source datasets with renamed columns
             target_df: Target dataset being built
         
         Returns:
-            Tuple of (dataset DataFrame, column name as it appears in the dataframe)
+            DataFrame containing the column
         """
-        if "." in source_str:
-            dataset_name, _ = source_str.split(".", 1)
-            if dataset_name not in source_data:
-                raise ValueError(f"Dataset {dataset_name} not loaded")
-            # Return the full source_str as the column name since columns are already renamed
-            return source_data[dataset_name], source_str
-        else:
-            # Reference to column in target dataset
-            return target_df, source_str
+        # First check target DataFrame
+        if column_name in target_df.columns:
+            return target_df
+            
+        # Then check source datasets
+        for dataset_name, df in source_data.items():
+            if column_name in df.columns:
+                return df
+        
+        # Column not found
+        raise ValueError(f"Column {column_name} not found in any dataset")
     
     def apply_filter(self, 
                     df: pl.DataFrame,

@@ -36,8 +36,9 @@ class CategorizationDerivation(BaseDerivation):
         if not cut_rules:
             raise ValueError(f"No cut rules specified for {column_spec.get('name')}")
         
-        # Get source values
-        source_df, source_col = self.get_source_dataset(source_str, source_data, target_df)
+        # Find the DataFrame containing the source column
+        source_df = self.find_column(source_str, source_data, target_df)
+        source_col = source_str  # Column name is the same with renamed columns
         
         if source_col not in source_df.columns:
             raise ValueError(f"Column {source_col} not found in source dataset")

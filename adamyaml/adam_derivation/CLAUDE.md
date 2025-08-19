@@ -52,8 +52,8 @@ def load_dataset(dataset_name: str,
 ### 3. BaseDerivation (derivations/base.py)
 Abstract base class defining the derivation interface:
 - Single `derive()` method that returns DataFrame
-- Helper methods for source dataset access and filtering
-- No separate compute/derive split
+- `find_column()` helper to locate columns in any DataFrame
+- `apply_filter()` helper for filtering DataFrames
 
 Interface:
 ```python
@@ -62,6 +62,11 @@ def derive(source_data: dict[str, pl.DataFrame],
           target_df: pl.DataFrame,
           column_spec: dict[str, Any]) -> pl.DataFrame:
     """Derive column and return updated dataframe"""
+
+def find_column(column_name: str, 
+               source_data: dict[str, pl.DataFrame],
+               target_df: pl.DataFrame) -> pl.DataFrame:
+    """Find which DataFrame contains the specified column"""
 ```
 
 ## Derivation Types
@@ -118,6 +123,12 @@ In Specification:
     source: DM.AGE  # References renamed column directly
 ```
 
+### Why This Simplification Works
+- **Unique Column Names**: After renaming, each column has a unique name across all datasets
+- **No Ambiguity**: `DM.AGE` can only exist in the DM dataset
+- **Simple Search**: `find_column()` just searches for the column in all DataFrames
+- **No Parsing Needed**: No need to split "DM.AGE" to find dataset and column separately
+
 ### Data Caching Optimization
 - Source data loaded **once** with renaming at pipeline start
 - Key variables preserved without renaming (e.g., USUBJID, SUBJID)
@@ -144,6 +155,7 @@ In Specification:
 - **No original vs renamed data**: Only renamed data used
 - **No complex joining logic**: Direct operations
 - **No DerivationFactory**: Dispatch logic integrated into engine
+- **No get_source_dataset**: Simplified to `find_column()` that searches all DataFrames
 
 ### Benefits
 - Easier to understand and maintain

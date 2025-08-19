@@ -32,8 +32,9 @@ class AggregationDerivation(BaseDerivation):
         if not source_str:
             raise ValueError(f"No source specified for {column_spec.get('name')}")
         
-        # Get source dataset and column
-        source_df, source_col = self.get_source_dataset(source_str, source_data, target_df)
+        # Find the DataFrame containing the source column
+        source_df = self.find_column(source_str, source_data, target_df)
+        source_col = source_str  # Column name is the same as source_str with renamed columns
         
         # Make a copy to avoid modifying original
         source_df = source_df.clone()
@@ -107,7 +108,8 @@ class AggregationDerivation(BaseDerivation):
                 raise ValueError("Target variable required for 'closest' aggregation")
             
             # Get target date/value
-            target_df_local, target_col = self.get_source_dataset(target_var, source_data, target_df)
+            target_df_local = self.find_column(target_var, source_data, target_df)
+            target_col = target_var  # Column name is the same with renamed columns
             
             # Find date column in source
             date_cols = [c for c in source_df.columns if "DTC" in c]
