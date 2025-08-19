@@ -68,14 +68,17 @@ class FunctionDerivation(BaseDerivation):
         Load a function using Python's import system.
         
         Args:
-            function_name: Either "module.function" or "function_name"
+            function_name: Can be:
+                - Full path: "adamyaml.adam_derivation.functions.get_bmi.get_bmi"
+                - Module function: "numpy.abs", "polars.col"
+                - Local function: "get_bmi"
             
         Returns:
             Callable function object
         """
         
         if "." in function_name:
-            # Module function (e.g., "numpy.abs", "polars.col")
+            # Module or full path function
             return self._load_module_function(function_name)
         else:
             # Local function from functions.py or dedicated file

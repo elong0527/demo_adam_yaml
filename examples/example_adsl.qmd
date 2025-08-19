@@ -13,7 +13,7 @@ from adamyaml import AdamSpec
 import polars as pl 
 
 pl.Config.set_tbl_cols(-1)  # Show all columns
-pl.Config.set_tbl_rows(20)  # Show up to 20 rows
+pl.Config.set_tbl_rows(10)  # Show up to 10 rows
 pl.Config.set_fmt_str_lengths(100)  # Show longer strings
 ```
 
@@ -40,29 +40,12 @@ from adamyaml.adam_derivation.engine import AdamDerivation
 dev = AdamDerivation("../spec/study1/adsl_study1.yaml")
 ```
 
-## Build key dataset 
+## Build Dataset
 
 - building a dataset that has one row per key variables combination.
 
 ```{python}
-dev._build_keys().head()
+dev.build()
 ```
 
-## Add a column 
-
-- based on column specification, derive a dataset that has 
-  + step 1: rename the source dataset to `{domain}.{name}` except key variables 
-  + step 2: keep key variables from source data
-  + step 3: derive the column 
-  + step 4: left join into the target df. 
-
-
-
-## Load SDTM datasets
-```{python}
-ig = pl.read_csv("../ADaMIG/ADaMIG_v1.3.csv")
-dm = pl.read_parquet("../data/sdtm/dm.parquet")
-sv = pl.read_parquet("../data/sdtm/dm.parquet")
-vs = pl.read_parquet("../data/sdtm/vs.parquet")
-```
 

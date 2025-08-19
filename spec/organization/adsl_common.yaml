@@ -115,7 +115,7 @@ columns:
     label: BMI (kg/m^2)
     type: float
     derivation:
-      function: get_bmi
+      function: adamyaml.adam_derivation.functions.get_bmi.get_bmi
       height: HEIGHT
       weight: WEIGHT
     validation:

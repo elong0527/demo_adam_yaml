@@ -90,7 +90,7 @@ columns:
   core: org-required
   derivation:
     source: VS.VSORRES
-    filter: VS.TESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
+    filter: VS.VSTESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
     aggregation:
       function: closest
       target: DM.RFSTDTC
@@ -102,7 +102,7 @@ columns:
   core: org-required
   derivation:
     source: VS.VSORRES
-    filter: VS.TESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
+    filter: VS.VSTESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
     aggregation:
       function: closest
       target: DM.RFSTDTC
@@ -113,11 +113,11 @@ columns:
   label: BMI (kg/m^2)
   core: org-required
   derivation:
-    function: get_bmi
+    function: adamyaml.adam_derivation.functions.get_bmi.get_bmi
     height: HEIGHT
     weight: WEIGHT
   validation:
     maximum_missing_percentage: 5
 dir:
-  sdtm: ../data/sdtm
-  adam: ../data/adam_study1
+  sdtm: ../../data/sdtm
+  adam: ../../data/adam_study1
