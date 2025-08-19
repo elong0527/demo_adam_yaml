@@ -107,8 +107,9 @@ class AdamDerivation:
         derivation_obj = self._get_derivation(col_spec)
         self.logger.info(f"Deriving {col_spec['name']} using {derivation_obj.__class__.__name__}")
         
-        # New derivations return a Series, add it to target_df
-        derived_series = derivation_obj.derive(col_spec, self.source_data, self.target_df)
+        # Setup context and derive
+        derivation_obj.setup(col_spec, self.source_data, self.target_df)
+        derived_series = derivation_obj.derive()
         self.target_df = self.target_df.with_columns(derived_series.alias(col_spec['name']))
     
     

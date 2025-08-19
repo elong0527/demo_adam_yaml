@@ -14,34 +14,29 @@ class SQLDerivation(BaseDerivation):
     Covers: constant, source, mapping, aggregation, cut patterns.
     """
     
-    def derive(self, 
-               col_spec: dict[str, Any], 
-               source_data: dict[str, pl.DataFrame],
-               target_df: pl.DataFrame) -> pl.Series:
+    def derive(self) -> pl.Series:
         """Derive column using SQL expression."""
         
-        derivation = col_spec.get("derivation", {})
-        col_name = col_spec["name"]
-        key_vars = col_spec.get("_key_vars", ["USUBJID"])
+        derivation = self.col_spec.get("derivation", {})
+        col_name = self.col_spec["name"]
+        key_vars = self.col_spec.get("_key_vars", ["USUBJID"])
         
         # Dispatch to appropriate SQL generator
         if "constant" in derivation:
-            return self._derive_constant(derivation["constant"], target_df)
+            return self._derive_constant(derivation["constant"])
         elif "source" in derivation:
-            return self._derive_source(derivation, source_data, target_df, key_vars)
+            return self._derive_source(derivation, key_vars)
         elif "cut" in derivation:
-            return self._derive_cut(derivation, source_data, target_df)
+            return self._derive_cut(derivation)
         else:
             raise ValueError(f"Unknown derivation type for {col_name}")
     
-    def _derive_constant(self, value: Any, target_df: pl.DataFrame) -> pl.Series:
+    def _derive_constant(self, value: Any) -> pl.Series:
         """Create a constant value column."""
-        return pl.Series([value] * target_df.height)
+        return pl.Series([value] * self.target_df.height)
     
     def _derive_source(self, 
                       derivation: dict[str, Any],
-                      source_data: dict[str, pl.DataFrame],
-                      target_df: pl.DataFrame,
                       key_vars: list[str]) -> pl.Series:
         """Derive from source with optional mapping, filter, and aggregation."""
         
@@ -53,8 +48,8 @@ class SQLDerivation(BaseDerivation):
             source_col = f"{dataset_name}.{column_name}"
         else:
             # Column from target dataset
-            if source in target_df.columns:
-                series = target_df[source]
+            if source in self.target_df.columns:
+                series = self.target_df[source]
             else:
                 raise ValueError(f"Column {source} not found in target dataset")
                 
@@ -85,20 +80,18 @@ class SQLDerivation(BaseDerivation):
             )
         
         # Execute SQL using Polars SQL context
-        return self._execute_sql(sql_query, source_data, target_df, key_vars)
+        return self._execute_sql(sql_query, key_vars)
     
     def _derive_cut(self, 
-                   derivation: dict[str, Any],
-                   source_data: dict[str, pl.DataFrame],
-                   target_df: pl.DataFrame) -> pl.Series:
+                   derivation: dict[str, Any]) -> pl.Series:
         """Derive using cut (categorization) logic."""
         
         source = derivation["source"]
         cuts = derivation["cut"]
         
         # Get source column
-        if source in target_df.columns:
-            source_series = target_df[source]
+        if source in self.target_df.columns:
+            source_series = self.target_df[source]
         else:
             raise ValueError(f"Source column {source} not found for cut")
         
@@ -140,7 +133,7 @@ class SQLDerivation(BaseDerivation):
         case_expr = "CASE " + " ".join(case_parts) + " ELSE NULL END"
         
         # Execute using Polars expressions
-        ctx = pl.SQLContext(frame=target_df)
+        ctx = pl.SQLContext(frame=self.target_df)
         result_df = ctx.execute(f"SELECT {case_expr} as result FROM frame")
         return result_df["result"]
     
@@ -230,20 +223,18 @@ class SQLDerivation(BaseDerivation):
     
     def _execute_sql(self,
                     sql: str,
-                    source_data: dict[str, pl.DataFrame],
-                    target_df: pl.DataFrame,
                     key_vars: list[str]) -> pl.Series:
         """Execute SQL query and return result as Series."""
         
         # Check for special CLOSEST handling
         if sql.startswith("CLOSEST:"):
-            return self._execute_closest(sql, source_data, target_df, key_vars)
+            return self._execute_closest(sql, key_vars)
         
         # Start with target DataFrame for context
-        merged_df = target_df.clone()
+        merged_df = self.target_df.clone()
         
         # Add source data if needed
-        for dataset_name, df in source_data.items():
+        for dataset_name, df in self.source_data.items():
             # Check if this dataset is referenced in the SQL
             if dataset_name in sql or f'"{dataset_name}.' in sql:
                 # Get available keys for joining
@@ -270,12 +261,12 @@ class SQLDerivation(BaseDerivation):
             result_df = ctx.execute(sql_quoted).collect()
             
             # Handle result based on size
-            if len(result_df) == len(target_df):
+            if len(result_df) == len(self.target_df):
                 # Direct assignment
                 return result_df["result"]
-            elif len(result_df) < len(target_df) and len(key_vars) > 0:
+            elif len(result_df) < len(self.target_df) and len(key_vars) > 0:
                 # Need to join to get all rows
-                final_df = target_df.select(key_vars).join(
+                final_df = self.target_df.select(key_vars).join(
                     result_df,
                     on=key_vars,
                     how="left"
@@ -283,18 +274,16 @@ class SQLDerivation(BaseDerivation):
                 return final_df["result"]
             else:
                 # Fallback - ensure we return right number of rows
-                return pl.Series([None] * target_df.height)
+                return pl.Series([None] * self.target_df.height)
                 
         except Exception as e:
             logger.warning(f"SQL execution failed: {e}, returning nulls")
             logger.debug(f"SQL: {sql}")
             logger.debug(f"Available columns: {merged_df.columns}")
-            return pl.Series([None] * target_df.height)
+            return pl.Series([None] * self.target_df.height)
     
     def _execute_closest(self,
                         sql_spec: str,
-                        source_data: dict[str, pl.DataFrame],
-                        target_df: pl.DataFrame,
                         key_vars: list[str]) -> pl.Series:
         """Execute 'closest' aggregation using native Polars operations."""
         
@@ -308,10 +297,10 @@ class SQLDerivation(BaseDerivation):
         dataset_name = source_col.split(".")[0]
         
         # Build merged DataFrame with necessary data
-        merged_df = target_df.clone()
+        merged_df = self.target_df.clone()
         
         # Add source data
-        for ds_name, df in source_data.items():
+        for ds_name, df in self.source_data.items():
             if ds_name == dataset_name or ds_name in target_col:
                 available_keys = [k for k in key_vars if k in df.columns]
                 if available_keys:
@@ -349,7 +338,7 @@ class SQLDerivation(BaseDerivation):
         
         # Find closest value for each subject
         result_list = []
-        for subject in target_df[key_vars[0]].unique():
+        for subject in self.target_df[key_vars[0]].unique():
             subject_data = filtered_df.filter(pl.col(key_vars[0]) == subject)
             
             if subject_data.height > 0 and source_col in subject_data.columns:
@@ -381,8 +370,8 @@ class SQLDerivation(BaseDerivation):
                 result_list.append(None)
         
         # Create result series matching target_df order
-        result_dict = dict(zip(target_df[key_vars[0]].to_list(), result_list))
-        result = [result_dict.get(subj) for subj in target_df[key_vars[0]].to_list()]
+        result_dict = dict(zip(self.target_df[key_vars[0]].to_list(), result_list))
+        result = [result_dict.get(subj) for subj in self.target_df[key_vars[0]].to_list()]
         
         logger.info(f"Applied closest aggregation, {sum(v is not None for v in result)} non-null values")
         return pl.Series(result)

@@ -1,8 +1,11 @@
-"""Custom function derivation for complex calculations."""
+"""Dynamic function derivation using Python's import system."""
 
 from typing import Any
 import polars as pl
 import logging
+import importlib
+import sys
+from pathlib import Path
 from .base import BaseDerivation
 
 logger = logging.getLogger(__name__)
@@ -10,78 +13,169 @@ logger = logging.getLogger(__name__)
 
 class FunctionDerivation(BaseDerivation):
     """
-    Handles custom function-based derivations.
-    Used for complex calculations that can't be expressed as SQL.
+    Dynamically loads and executes Python functions for derivations.
+    
+    Supports:
+    - Module functions: "numpy.abs", "polars.col"
+    - Local functions: "get_bmi" from functions.py or get_bmi.py
     """
     
-    def derive(self, 
-               col_spec: dict[str, Any], 
-               source_data: dict[str, pl.DataFrame],
-               target_df: pl.DataFrame) -> pl.Series:
-        """Derive column using custom function."""
+    def derive(self) -> pl.Series:
+        """Derive column using dynamically loaded function."""
         
-        derivation = col_spec.get("derivation", {})
+        derivation = self.col_spec.get("derivation", {})
         function_name = derivation.get("function")
         
         if not function_name:
             raise ValueError("Function derivation requires 'function' field")
         
-        # Get function arguments from specification
-        args = {}
-        for key, value in derivation.items():
-            if key != "function":
-                # Value could be a column name or a literal
-                if isinstance(value, str) and value in target_df.columns:
-                    args[key] = target_df[value]
-                else:
-                    args[key] = value
+        # Extract arguments from specification
+        args = self._extract_arguments(derivation)
         
-        # Execute the function
+        # Load and execute function
         try:
-            result = self._execute_function(function_name, args, target_df)
-            logger.info(f"Applied custom function {function_name}")
+            func = self._load_function(function_name)
+            result = func(**args)
+            
+            # Ensure result is a proper Series
+            result = self._ensure_series(result)
+            
+            logger.info(f"Applied function {function_name}")
             return result
+            
         except Exception as e:
             logger.error(f"Function {function_name} failed: {e}")
-            return pl.Series([None] * target_df.height)
+            return pl.Series([None] * self.target_df.height)
     
-    def _execute_function(self, 
-                         function_name: str, 
-                         args: dict[str, Any],
-                         target_df: pl.DataFrame) -> pl.Series:
-        """Execute a custom function."""
+    def _extract_arguments(self, derivation: dict[str, Any]) -> dict[str, Any]:
+        """Extract function arguments from derivation spec."""
+        args = {}
         
-        # Map of available functions
-        functions = {
-            "get_bmi": self._calculate_bmi,
-            # Add more custom functions here as needed
-        }
-        
-        if function_name not in functions:
-            raise ValueError(f"Unknown function: {function_name}")
-        
-        return functions[function_name](args, target_df)
+        for key, value in derivation.items():
+            if key == "function":
+                continue
+                
+            # If value is a column name in target_df, use that column
+            if isinstance(value, str) and value in self.target_df.columns:
+                args[key] = self.target_df[value]
+            else:
+                args[key] = value
+                
+        return args
     
-    def _calculate_bmi(self, args: dict[str, Any], target_df: pl.DataFrame) -> pl.Series:
-        """Calculate BMI from height and weight."""
+    def _load_function(self, function_name: str):
+        """
+        Load a function using Python's import system.
         
-        height = args.get("height")
-        weight = args.get("weight")
+        Args:
+            function_name: Either "module.function" or "function_name"
+            
+        Returns:
+            Callable function object
+        """
         
-        if height is None or weight is None:
-            raise ValueError("BMI calculation requires 'height' and 'weight' parameters")
+        if "." in function_name:
+            # Module function (e.g., "numpy.abs", "polars.col")
+            return self._load_module_function(function_name)
+        else:
+            # Local function from functions.py or dedicated file
+            return self._load_local_function(function_name)
+    
+    def _load_module_function(self, function_name: str):
+        """Load function from an installed module."""
+        parts = function_name.rsplit(".", 1)
+        module_name = parts[0]
+        func_name = parts[1]
         
-        # Convert to Series if needed
-        if not isinstance(height, pl.Series):
-            height = pl.Series([height] * target_df.height)
-        if not isinstance(weight, pl.Series):
-            weight = pl.Series([weight] * target_df.height)
+        try:
+            module = importlib.import_module(module_name)
+            return getattr(module, func_name)
+        except (ImportError, AttributeError) as e:
+            raise ImportError(f"Cannot import {function_name}: {e}")
+    
+    def _load_local_function(self, function_name: str):
+        """Load function from local Python files."""
         
-        # Calculate BMI: weight (kg) / (height (cm) / 100)^2
-        # Handle nulls gracefully
-        bmi = weight / ((height / 100) ** 2)
+        # Try functions.py first
+        if self._try_load_from_functions_module(function_name):
+            return getattr(sys.modules["functions"], function_name)
         
-        # Round to 1 decimal place
-        bmi = bmi.round(1)
+        # Try dedicated file (function_name.py)
+        func = self._try_load_from_dedicated_file(function_name)
+        if func:
+            return func
+            
+        raise ImportError(
+            f"Function '{function_name}' not found in functions.py "
+            f"or {function_name}.py in current directory"
+        )
+    
+    def _try_load_from_functions_module(self, function_name: str) -> bool:
+        """Try to load function from functions.py."""
         
-        return bmi
+        # Check if already loaded
+        if "functions" in sys.modules:
+            return hasattr(sys.modules["functions"], function_name)
+        
+        # Try to load functions.py
+        functions_path = Path.cwd() / "functions.py"
+        if not functions_path.exists():
+            return False
+            
+        try:
+            spec = importlib.util.spec_from_file_location("functions", functions_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["functions"] = module
+            spec.loader.exec_module(module)
+            return hasattr(module, function_name)
+        except Exception as e:
+            logger.debug(f"Failed to load functions.py: {e}")
+            return False
+    
+    def _try_load_from_dedicated_file(self, function_name: str):
+        """Try to load function from dedicated file."""
+        
+        func_file = Path.cwd() / f"{function_name}.py"
+        if not func_file.exists():
+            return None
+            
+        try:
+            spec = importlib.util.spec_from_file_location(function_name, func_file)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return getattr(module, function_name)
+        except Exception as e:
+            logger.debug(f"Failed to load {function_name}.py: {e}")
+            return None
+    
+    def _ensure_series(self, result: Any) -> pl.Series:
+        """Convert result to a proper Polars Series with correct length."""
+        
+        # Already a Series with correct length
+        if isinstance(result, pl.Series):
+            if len(result) == self.target_df.height:
+                return result
+            elif len(result) == 1:
+                # Broadcast single value
+                return pl.Series([result[0]] * self.target_df.height)
+            else:
+                raise ValueError(
+                    f"Function returned {len(result)} values, "
+                    f"expected {self.target_df.height}"
+                )
+        
+        # Convert iterables to Series
+        if hasattr(result, '__iter__') and not isinstance(result, str):
+            series = pl.Series(result)
+            if len(series) == self.target_df.height:
+                return series
+            elif len(series) == 1:
+                return pl.Series([series[0]] * self.target_df.height)
+            else:
+                raise ValueError(
+                    f"Function returned {len(series)} values, "
+                    f"expected {self.target_df.height}"
+                )
+        
+        # Scalar value - broadcast to all rows
+        return pl.Series([result] * self.target_df.height)
