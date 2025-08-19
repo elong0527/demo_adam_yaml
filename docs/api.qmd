@@ -1,0 +1,173 @@
+---
+title: "API Reference"
+---
+
+## Main Classes
+
+### AdamDerivation
+
+The main engine for deriving ADaM datasets from SDTM data.
+
+```python
+from adamyaml.adam_derivation import AdamDerivation
+
+engine = AdamDerivation(spec_path: str)
+```
+
+**Methods:**
+- `build() -> pl.DataFrame`: Build the ADaM dataset
+- `save() -> Path`: Save dataset to parquet file
+
+### AdamSpec
+
+Handles loading and merging hierarchical YAML specifications.
+
+```python
+from adamyaml.adam_spec import AdamSpec
+
+spec = AdamSpec(path: str, schema_path: str = None)
+```
+
+**Properties:**
+- `domain`: Dataset domain name
+- `columns`: List of Column objects
+- `key`: Key variables
+- `is_valid`: Boolean validation status
+
+**Methods:**
+- `get_column(name: str) -> Column`: Get specific column specification
+- `save(path: str)`: Save consolidated specification
+- `to_dict() -> dict`: Export as dictionary
+- `to_yaml() -> str`: Export as YAML string
+
+## Derivation Classes
+
+### SQLDerivation
+
+Handles SQL-based derivations covering most patterns.
+
+**Supported Patterns:**
+- Constants: `constant: "value"`
+- Source mapping: `source: DM.AGE`
+- Value recoding: `mapping: {F: Female, M: Male}`
+- Aggregation: `aggregation: {function: mean}`
+- Categorization: `cut: {"<18": "Young"}`
+
+### FunctionDerivation
+
+Dynamically loads and executes Python functions.
+
+**Function Sources:**
+- Module functions: `numpy.abs`, `polars.col`
+- Local functions: From `functions.py`
+- Dedicated files: From `{function_name}.py`
+
+## YAML Specification Format
+
+### Basic Structure
+
+```yaml
+domain: ADSL
+key: [USUBJID]
+schema: schema.yaml
+
+dir:
+  sdtm: path/to/sdtm
+  adam: path/to/adam
+
+columns:
+  - name: VARIABLE_NAME
+    type: str|int|float|date|datetime
+    label: Variable Description
+    core: cdisc-required|org-required|expected|permissible
+    derivation:
+      # derivation specification
+    validation:
+      # validation rules
+```
+
+### Derivation Types
+
+#### Constant
+```yaml
+derivation:
+  constant: "ADSL"
+```
+
+#### Source
+```yaml
+derivation:
+  source: DM.AGE
+```
+
+#### Source with Mapping
+```yaml
+derivation:
+  source: DM.SEX
+  mapping:
+    F: Female
+    M: Male
+```
+
+#### Aggregation
+```yaml
+derivation:
+  source: VS.VSORRES
+  filter: VS.VSTESTCD == "WEIGHT"
+  aggregation:
+    function: closest|first|last|mean|max|min
+    target: DM.RFSTDTC  # for closest
+```
+
+#### Categorization
+```yaml
+derivation:
+  source: AGE
+  cut:
+    "<18": "Pediatric"
+    ">=18 and <65": "Adult"
+    ">=65": "Elderly"
+```
+
+#### Custom Function
+```yaml
+derivation:
+  function: get_bmi
+  height: HEIGHT
+  weight: WEIGHT
+```
+
+## Utility Functions
+
+### merge_yaml
+
+Merge multiple YAML files with inheritance support.
+
+```python
+from adamyaml.adam_spec import merge_yaml
+
+merged = merge_yaml(
+    paths=["base.yaml", "override.yaml"],
+    list_merge_strategy="merge_by_key",
+    list_merge_keys={"columns": "name"}
+)
+```
+
+## Schema Validation
+
+### SchemaValidator
+
+Validates specifications against schema rules.
+
+```python
+from adamyaml.adam_spec import SchemaValidator
+
+validator = SchemaValidator("schema.yaml")
+results = validator.validate(spec_dict)
+
+if validator.is_valid():
+    print("Valid specification")
+else:
+    for error in validator.get_errors():
+        print(f"Error: {error.message}")
+```

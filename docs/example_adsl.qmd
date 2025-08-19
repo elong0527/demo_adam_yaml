@@ -1,0 +1,153 @@
+---
+title: "ADSL Dataset Example"
+format:
+  html:
+    code-fold: false
+execute:
+  echo: true
+  warning: false
+---
+
+## Introduction
+
+This example demonstrates how to generate an ADSL (Analysis Dataset Subject Level) dataset using the ADaM YAML specification system.
+
+## Setup
+
+First, let's import the necessary libraries and load our specification:
+
+```{python}
+import sys
+import os
+sys.path.insert(0, os.path.abspath(".."))
+
+import polars as pl
+from adamyaml.adam_derivation import AdamDerivation
+from adamyaml.adam_spec import AdamSpec
+from reactable import Reactable, Column
+import json
+```
+
+## Load and Examine the Specification
+
+Let's load the ADSL specification and examine its structure:
+
+```{python}
+# Load the specification
+spec = AdamSpec("../spec/study1/adsl_study1.yaml")
+
+# Display basic information
+print(f"Domain: {spec.domain}")
+print(f"Number of columns: {len(spec.columns)}")
+print(f"Key variables: {spec.key}")
+```
+
+## View Column Specifications
+
+Let's create an interactive table showing the column specifications:
+
+```{python}
+# Convert columns to a list of dictionaries for display
+columns_data = []
+for col in spec.columns:
+    columns_data.append({
+        "Name": col.name,
+        "Label": col.label,
+        "Type": col.type,
+        "Core": col.core,
+        "Has Derivation": "Yes" if col.derivation else "No"
+    })
+
+# Create interactive table
+Reactable(
+    data=columns_data,
+    columns={
+        "Name": Column(name="Variable", min_width=100),
+        "Label": Column(name="Description", min_width=200),
+        "Type": Column(name="Data Type", min_width=80),
+        "Core": Column(name="Requirement", min_width=100),
+        "Has Derivation": Column(name="Derived?", min_width=80)
+    },
+    searchable=True,
+    pagination=True,
+    default_page_size=10,
+    striped=True,
+    highlight=True,
+    bordered=True
+)
+```
+
+## Generate the Dataset
+
+Now let's generate the actual ADSL dataset:
+
+```{python}
+# Create the derivation engine
+engine = AdamDerivation("../spec/study1/adsl_study1.yaml")
+
+# Build the dataset
+df = engine.build()
+
+print(f"Dataset shape: {df.shape}")
+print(f"Columns: {', '.join(df.columns)}")
+```
+
+## Explore the Generated Data
+
+Let's look at the first few records with an interactive table:
+
+```{python}
+# Convert to dict for reactable display
+df_display = df.head(20).to_dicts()
+
+# Create interactive table for the data
+Reactable(
+    data=df_display,
+    searchable=True,
+    filterable=True,
+    pagination=True,
+    default_page_size=10,
+    striped=True,
+    highlight=True,
+    bordered=True,
+    resizable=True
+)
+```
+
+## Data Quality Summary
+
+Let's create a summary of data completeness:
+
+```{python}
+# Calculate completeness for each column
+completeness_data = []
+for col in df.columns:
+    non_null = df[col].drop_nulls().len()
+    total = df.height
+    completeness = (non_null / total) * 100
+    
+    completeness_data.append({
+        "Column": col,
+        "Non-Null": non_null,
+        "Total": total,
+        "Completeness": completeness
+    })
+
+# Display completeness table
+Reactable(
+    data=completeness_data,
+    columns={
+        "Column": Column(name="Variable"),
+        "Non-Null": Column(name="Non-Null Count"),
+        "Total": Column(name="Total Records"),
+        "Completeness": Column(name="% Complete", format={"digits": 1})
+    },
+    striped=True,
+    highlight=True,
+    bordered=True
+)
+```
+
+## Conclusion
+
+This example demonstrated how to use the ADaM YAML system to generate ADSL datasets with interactive exploration using reactable.

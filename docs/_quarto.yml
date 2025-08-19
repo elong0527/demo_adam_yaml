@@ -1,0 +1,39 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "ADaM YAML Documentation"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: example_adsl.qmd
+        text: ADSL Example
+      - href: api.qmd
+        text: API Reference
+    right:
+      - icon: github
+        href: https://github.com/your-username/demo_adam_yaml
+        
+  sidebar:
+    style: "docked"
+    search: true
+    contents:
+      - section: "Getting Started"
+        contents:
+          - index.qmd
+          - example_adsl.qmd
+      - section: "API"
+        contents:
+          - api.qmd
+          
+metadata-files:
+  - _sidebar.yml
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 3

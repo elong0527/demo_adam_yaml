@@ -1,0 +1,24 @@
+website:
+  sidebar:
+    - title: "Getting Started"
+      contents:
+        - text: "Overview"
+          href: index.qmd
+        - text: "Installation"
+          href: index.qmd#installation
+        - text: "Quick Start"
+          href: index.qmd#quick-start
+          
+    - title: "Examples"
+      contents:
+        - text: "ADSL Dataset"
+          href: example_adsl.qmd
+          
+    - title: "Reference"
+      contents:
+        - text: "API Documentation"
+          href: api.qmd
+        - text: "YAML Specification"
+          href: api.qmd#yaml-specification-format
+        - text: "Derivation Types"
+          href: api.qmd#derivation-types

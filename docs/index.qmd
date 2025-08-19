@@ -1,0 +1,55 @@
+---
+title: "ADaM YAML Documentation"
+---
+
+## Overview
+
+This project provides a Python module for handling YAML-based specifications for ADaM (Analysis Data Model) datasets in clinical trials, following CDISC standards.
+
+## Features
+
+- **YAML-based Specifications**: Define ADaM datasets using human-readable YAML files
+- **SQL-First Derivations**: Most transformations executed via Polars SQL for optimal performance
+- **Dynamic Function Loading**: Extensible function system without code modifications
+- **CDISC Compliant**: Follows ADaM implementation guidelines
+
+## Quick Start
+
+### Installation
+
+```bash
+uv pip install -e .
+```
+
+### Basic Usage
+
+```python
+from adamyaml.adam_derivation import AdamDerivation
+
+# Load specification and build dataset
+engine = AdamDerivation("spec/study1/adsl_study1.yaml")
+df = engine.build()
+
+# Save to file
+engine.save()
+```
+
+## Architecture
+
+The module uses a minimal 3-class design:
+
+1. **BaseDerivation**: Abstract base class with context storage
+2. **SQLDerivation**: Handles 90% of patterns via SQL
+3. **FunctionDerivation**: Dynamic function loading for custom logic
+
+## Examples
+
+- [ADSL Example](example_adsl.qmd) - Complete example of generating an ADSL dataset
+- [API Reference](api.qmd) - Detailed API documentation
+
+## Key Technologies
+
+- **Python 3.10+**: Modern Python with type hints
+- **Polars**: High-performance DataFrame library
+- **PyYAML**: YAML parsing and generation
+- **Quarto**: Documentation generation
