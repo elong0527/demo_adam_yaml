@@ -1,6 +1,6 @@
 parents: 
-  - adsl_common.yaml
-  - adsl_project.yaml
+  - ../organization/adsl_common.yaml
+  - ../project/adsl_project.yaml
 
 dir: 
   sdtm: "../data/sdtm"

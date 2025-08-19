@@ -19,11 +19,11 @@ pl.Config.set_fmt_str_lengths(100)  # Show longer strings
 
 ```{python}
 # create spec with schema validation
-adsl_spec1 = AdamSpec("../spec/adsl_study1.yaml")
-adsl_spec1.save("../spec/adsl_study_combined1.yaml")
+adsl_spec1 = AdamSpec("../spec/study1/adsl_study1.yaml")
+adsl_spec1.save("../spec/study1/final_adsl_study1.yaml")
 
-adsl_spec2 = AdamSpec("../spec/adsl_study2.yaml")
-adsl_spec2.save("../spec/adsl_study_combined2.yaml")
+adsl_spec2 = AdamSpec("../spec/study2/adsl_study2.yaml")
+adsl_spec2.save("../spec/study2/final_adsl_study2.yaml")
 ```
 
 ```{python}
@@ -37,7 +37,7 @@ from adamyaml.adam_derivation.engine import AdamDerivation
 ```
 
 ```{python}
-adsl_derivation = AdamDerivation("../spec/adsl_study1.yaml")
+adsl_derivation = AdamDerivation("../spec/study1/adsl_study1.yaml")
 ```
 
 ## Load SDTM datasets
