@@ -59,14 +59,18 @@ class BaseDerivation(ABC):
     def apply_filter(self, 
                     df: pl.DataFrame,
                     filter_expr: str,
-                    source_data: dict[str, pl.DataFrame]) -> pl.DataFrame:
+                    source_data: dict[str, pl.DataFrame],
+                    target_df: pl.DataFrame,
+                    key_vars: list[str] | None = None) -> pl.DataFrame:
         """
-        Apply filter expression to dataframe using Polars
+        Apply SQL-like filter expression to dataframe.
         
         Args:
-            df: DataFrame to filter
-            filter_expr: Filter expression
-            source_data: Dictionary of available datasets
+            df: DataFrame to filter (primary data)
+            filter_expr: SQL-like filter expression (e.g., "DM.AGE >= 65 AND VS.WEIGHT > 80")
+            source_data: Dictionary of all source datasets
+            target_df: Current target DataFrame being built
+            key_vars: Key variables to use for joins (default: ["USUBJID"])
         
         Returns:
             Filtered DataFrame
@@ -75,64 +79,69 @@ class BaseDerivation(ABC):
             return df
         
         try:
-            # Split by & for multiple conditions
-            conditions = filter_expr.split(" & ")
-            result = df
+            # Use default key variables if not provided
+            if key_vars is None:
+                key_vars = ["USUBJID"]  # Default, but should be provided
             
-            for cond in conditions:
-                cond = cond.strip()
+            # Determine which datasets are referenced in the filter
+            referenced_datasets = set()
+            for dataset_name in source_data.keys():
+                if f"{dataset_name}." in filter_expr:
+                    referenced_datasets.add(dataset_name)
+            
+            # Also check for references to target columns
+            needs_target = any(col in filter_expr for col in target_df.columns if col in filter_expr)
+            
+            # Create SQL context with all necessary datasets
+            ctx = pl.SQLContext()
+            
+            # Register the main DataFrame
+            ctx.register("main", df)
+            
+            # Register referenced source datasets
+            for dataset_name in referenced_datasets:
+                ctx.register(dataset_name.lower(), source_data[dataset_name])
+            
+            # Register target if needed
+            if needs_target and target_df.height > 0:
+                ctx.register("target", target_df)
+            
+            # Build SQL query
+            # Need to handle column names with dots by adding backticks
+            filter_expr_sql = filter_expr
+            
+            # Replace column references with backticks for SQL
+            import re
+            # Find all column references like DM.AGE or VS.WEIGHT
+            pattern = r'([A-Z]+\.[A-Z_]+)'
+            filter_expr_sql = re.sub(pattern, r'`\1`', filter_expr_sql)
+            
+            # Build the query with necessary joins
+            if referenced_datasets:
+                # Build join clauses using key variables
+                join_clauses = []
+                for dataset_name in referenced_datasets:
+                    # Find common key columns between datasets
+                    main_keys = [k for k in key_vars if k in df.columns]
+                    dataset_keys = [k for k in key_vars if k in source_data[dataset_name].columns]
+                    common_keys = list(set(main_keys) & set(dataset_keys))
+                    
+                    if common_keys:
+                        # Build join condition
+                        join_conditions = []
+                        for key in common_keys:
+                            join_conditions.append(f"main.{key} = {dataset_name.lower()}.{key}")
+                        join_clause = " AND ".join(join_conditions)
+                        join_clauses.append(f"LEFT JOIN {dataset_name.lower()} ON {join_clause}")
                 
-                # Handle equality checks
-                if "==" in cond:
-                    parts = cond.split("==")
-                    col_ref = parts[0].strip()
-                    value = parts[1].strip().strip('"').strip("'")
-                    
-                    # Extract column name from reference
-                    if "." in col_ref:
-                        dataset_name, col_name = col_ref.split(".", 1)
-                        # Check if it matches current dataframe's dataset
-                        if col_name in df.columns:
-                            result = result.filter(pl.col(col_name) == value)
-                    else:
-                        col_name = col_ref
-                        if col_name in df.columns:
-                            result = result.filter(pl.col(col_name) == value)
-                
-                # Handle less than comparisons
-                elif "<" in cond and "=" not in cond:
-                    parts = cond.split("<")
-                    col_ref = parts[0].strip()
-                    compare_ref = parts[1].strip()
-                    
-                    # Extract column names
-                    if "." in col_ref:
-                        _, col_name = col_ref.split(".", 1)
-                    else:
-                        col_name = col_ref
-                    
-                    # Handle comparison with another column reference
-                    if "." in compare_ref:
-                        dataset_name, compare_col = compare_ref.split(".", 1)
-                        if dataset_name in source_data and "USUBJID" in df.columns:
-                            # Get comparison values from source dataset
-                            compare_df = source_data[dataset_name]
-                            if "USUBJID" in compare_df.columns and compare_col in compare_df.columns:
-                                # Join to get comparison values
-                                merged = result.join(
-                                    compare_df.select(["USUBJID", compare_col]).unique(),
-                                    on="USUBJID",
-                                    how="left"
-                                )
-                                if col_name in merged.columns:
-                                    result = merged.filter(pl.col(col_name) < pl.col(compare_col))
-                                    # Drop the joined column
-                                    if compare_col in result.columns and compare_col not in df.columns:
-                                        result = result.drop(compare_col)
-                    else:
-                        # Direct value comparison
-                        if col_name in df.columns:
-                            result = result.filter(pl.col(col_name) < compare_ref)
+                joins = " ".join(join_clauses)
+                sql_query = f"SELECT DISTINCT main.* FROM main {joins} WHERE {filter_expr_sql}"
+            else:
+                # Simple filter on main DataFrame only
+                sql_query = f"SELECT * FROM main WHERE {filter_expr_sql}"
+            
+            # Execute query
+            result = ctx.execute(sql_query).collect()
             
             return result
             

@@ -53,7 +53,7 @@ def load_dataset(dataset_name: str,
 Abstract base class defining the derivation interface:
 - Single `derive()` method that returns DataFrame
 - `find_column()` helper to locate columns in any DataFrame
-- `apply_filter()` helper for filtering DataFrames
+- `apply_filter()` helper using SQL-like expressions
 
 Interface:
 ```python
@@ -67,6 +67,12 @@ def find_column(column_name: str,
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame) -> pl.DataFrame:
     """Find which DataFrame contains the specified column"""
+
+def apply_filter(df: pl.DataFrame,
+                filter_expr: str,
+                source_data: dict[str, pl.DataFrame],
+                target_df: pl.DataFrame) -> pl.DataFrame:
+    """Apply SQL-like filter with automatic joins"""
 ```
 
 ## Derivation Types
@@ -129,11 +135,34 @@ In Specification:
 - **Simple Search**: `find_column()` just searches for the column in all DataFrames
 - **No Parsing Needed**: No need to split "DM.AGE" to find dataset and column separately
 
+### SQL-Based Filtering
+The new `apply_filter` method uses SQL-like expressions:
+
+```yaml
+# In YAML specification
+derivation:
+  source: VS.VSORRES
+  filter: "VS.VSTESTCD = 'WEIGHT' AND VS.VSORRES > '80'"
+```
+
+Benefits:
+- **Standard SQL Syntax**: Familiar and powerful
+- **Automatic Joins**: Handles multi-dataset filters automatically
+- **Complex Logic**: Supports AND, OR, comparisons, etc.
+- **Polars SQL Engine**: Leverages Polars' built-in SQL support
+
 ### Data Caching Optimization
 - Source data loaded **once** with renaming at pipeline start
 - Key variables preserved without renaming (e.g., USUBJID, SUBJID)
 - Renamed data cached and reused throughout derivation
 - No duplicate loading - efficient memory usage
+
+### Key Variable Handling
+- Key variables defined in specification (e.g., ["USUBJID", "SUBJID"])
+- Not all datasets have all keys (e.g., VS may only have USUBJID)
+- Aggregations use available keys for grouping
+- Joins use common keys between datasets
+- No hardcoded "USUBJID" - uses specification's key definition
 
 ### Processing Flow
 1. Load specification from YAML
@@ -156,6 +185,7 @@ In Specification:
 - **No complex joining logic**: Direct operations
 - **No DerivationFactory**: Dispatch logic integrated into engine
 - **No get_source_dataset**: Simplified to `find_column()` that searches all DataFrames
+- **No manual filter parsing**: SQL-like expressions with automatic joins
 
 ### Benefits
 - Easier to understand and maintain

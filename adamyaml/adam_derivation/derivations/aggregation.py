@@ -44,7 +44,8 @@ class AggregationDerivation(BaseDerivation):
         if filter_expr:
             logging.getLogger(__name__).debug(f"Applying filter: {filter_expr}")
             logging.getLogger(__name__).debug(f"Before filter: {source_df.height} records")
-            source_df = self.apply_filter(source_df, filter_expr, source_data)
+            key_vars = column_spec.get('_key_vars', ["USUBJID"])
+            source_df = self.apply_filter(source_df, filter_expr, source_data, target_df, key_vars)
             logging.getLogger(__name__).debug(f"After filter: {source_df.height} records")
         
         # Convert source column to numeric if it's string
@@ -58,49 +59,62 @@ class AggregationDerivation(BaseDerivation):
         agg_function = agg_config.get("function", "first")
         target_var = agg_config.get("target")
         
-        # Ensure we have USUBJID for grouping
-        if "USUBJID" not in source_df.columns:
-            raise ValueError("USUBJID required for aggregation")
+        # Get key variables for grouping
+        key_vars = column_spec.get('_key_vars', ["USUBJID"])
+        # Find which key variables are actually in the source dataset
+        # (not all datasets have all keys - e.g., VS may not have SUBJID)
+        available_keys = [k for k in key_vars if k in source_df.columns]
+        if not available_keys:
+            raise ValueError(f"No key variables from {key_vars} found in source dataset")
         
         # Get unique subjects from target or source
-        if target_df.height > 0 and "USUBJID" in target_df.columns:
-            subjects_df = target_df.select("USUBJID").unique()
+        # Use available_keys since not all datasets have all keys
+        if target_df.height > 0:
+            target_keys = [k for k in available_keys if k in target_df.columns]
+            if target_keys:
+                subjects_df = target_df.select(target_keys).unique()
+            else:
+                subjects_df = source_df.select(available_keys).unique()
         elif "DM" in source_data:
-            subjects_df = source_data["DM"].select("USUBJID").unique()
+            dm_keys = [k for k in available_keys if k in source_data["DM"].columns]
+            if dm_keys:
+                subjects_df = source_data["DM"].select(dm_keys).unique()
+            else:
+                subjects_df = source_df.select(available_keys).unique()
         else:
-            subjects_df = source_df.select("USUBJID").unique()
+            subjects_df = source_df.select(available_keys).unique()
         
-        # Apply aggregation function
+        # Apply aggregation function using available keys
         if agg_function == "first":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).first().alias(source_col)
             )
         elif agg_function == "last":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).last().alias(source_col)
             )
         elif agg_function == "mean":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).mean().alias(source_col)
             )
         elif agg_function == "median":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).median().alias(source_col)
             )
         elif agg_function == "min":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).min().alias(source_col)
             )
         elif agg_function == "max":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).max().alias(source_col)
             )
         elif agg_function == "sum":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.col(source_col).sum().alias(source_col)
             )
         elif agg_function == "count":
-            agg_df = source_df.group_by("USUBJID").agg(
+            agg_df = source_df.group_by(available_keys).agg(
                 pl.count().alias(source_col)
             )
         elif agg_function == "closest":
@@ -121,11 +135,12 @@ class AggregationDerivation(BaseDerivation):
             else:
                 date_col = date_cols[0]
                 
-                # Join target dates
-                if "USUBJID" in target_df_local.columns and target_col in target_df_local.columns:
+                # Join target dates using available keys
+                join_keys = [k for k in available_keys if k in target_df_local.columns]
+                if join_keys and target_col in target_df_local.columns:
                     source_with_target = source_df.join(
-                        target_df_local.select(["USUBJID", target_col]).unique(),
-                        on="USUBJID",
+                        target_df_local.select(join_keys + [target_col]).unique(),
+                        on=join_keys,
                         how="left"
                     )
                     
@@ -141,26 +156,27 @@ class AggregationDerivation(BaseDerivation):
                     )
                     
                     # Get the row with minimum difference per subject
-                    agg_df = source_with_target.group_by("USUBJID").agg(
+                    agg_df = source_with_target.group_by(available_keys).agg(
                         pl.col(source_col).sort_by("_diff").first().alias(source_col)
                     )
                 else:
                     # Fallback to first value
-                    agg_df = source_df.group_by("USUBJID").agg(
+                    agg_df = source_df.group_by(available_keys).agg(
                         pl.col(source_col).first().alias(source_col)
                     )
         else:
             raise ValueError(f"Unknown aggregation function: {agg_function}")
         
         # Join with subjects to ensure all subjects are included
-        result_df = subjects_df.join(agg_df, on="USUBJID", how="left")
+        # Use available_keys for joining
+        result_df = subjects_df.join(agg_df, on=available_keys, how="left")
         
         # Get the result series in the correct order
-        if target_df.height > 0 and "USUBJID" in target_df.columns:
-            # Join back to target to maintain order
-            final_df = target_df.select("USUBJID").join(
+        if target_df.height > 0 and target_keys:
+            # Join back to target to maintain order using available keys
+            final_df = target_df.select(target_keys).join(
                 result_df,
-                on="USUBJID",
+                on=target_keys,
                 how="left"
             )
             result = final_df[source_col]
