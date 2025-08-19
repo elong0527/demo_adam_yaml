@@ -80,14 +80,14 @@ class AdamDerivation:
         self.source_data = {}
     
     def _derive_column(self, col_spec: dict[str, Any]) -> None:
-        derivation_obj = DerivationFactory.get_derivation(col_spec)
+        derivation_obj = self._get_derivation(col_spec)
         self.target_df = derivation_obj.derive(self.source_data, self.target_df, col_spec)
 ```
 
 #### Key Components
 - **SDTMLoader**: Handles data loading with automatic column renaming
 - **BaseDerivation**: Abstract base with unified `derive()` method returning DataFrames
-- **DerivationFactory**: Simple dispatch to derivation classes
+- **Derivation Dispatch**: Integrated into engine's `_get_derivation()` method
 - **Derivation Types**: Source, Constant, Aggregation, Custom, Categorization, Conditional
 
 #### Column Renaming Strategy

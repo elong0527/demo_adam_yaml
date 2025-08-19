@@ -1,6 +1,6 @@
 """Derivation implementations for ADaM variables."""
 
-from .base import BaseDerivation, DerivationFactory
+from .base import BaseDerivation
 from .constant import ConstantDerivation
 from .source import SourceDerivation
 from .aggregation import AggregationDerivation
@@ -10,7 +10,6 @@ from .custom import CustomDerivation
 
 __all__ = [
     "BaseDerivation",
-    "DerivationFactory",
     "ConstantDerivation",
     "SourceDerivation",
     "AggregationDerivation",

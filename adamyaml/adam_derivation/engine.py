@@ -8,7 +8,6 @@ from typing import Any
 import logging
 
 from .loaders import SDTMLoader
-from .derivations import DerivationFactory
 from ..adam_spec import AdamSpec
 
 
@@ -86,9 +85,35 @@ class AdamDerivation:
         )
     
     
+    def _get_derivation(self, col_spec: dict[str, Any]):
+        """Get appropriate derivation class based on specification."""
+        derivation = col_spec.get("derivation", {})
+        
+        # Simple dispatch based on derivation keys
+        if "constant" in derivation:
+            from .derivations.constant import ConstantDerivation
+            return ConstantDerivation()
+        elif "function" in derivation:
+            from .derivations.custom import CustomDerivation
+            return CustomDerivation()
+        elif "aggregation" in derivation:
+            from .derivations.aggregation import AggregationDerivation
+            return AggregationDerivation()
+        elif "source" in derivation:
+            from .derivations.source import SourceDerivation
+            return SourceDerivation()
+        elif "condition" in derivation:
+            from .derivations.condition import ConditionalDerivation
+            return ConditionalDerivation()
+        elif "cut" in derivation:
+            from .derivations.categorization import CategorizationDerivation
+            return CategorizationDerivation()
+        else:
+            raise ValueError(f"Unknown derivation type for {col_spec.get('name')}: {derivation}")
+    
     def _derive_column(self, col_spec: dict[str, Any]) -> None:
         """Derive a single column."""
-        derivation_obj = DerivationFactory.get_derivation(col_spec)
+        derivation_obj = self._get_derivation(col_spec)
         self.logger.info(f"Deriving {col_spec['name']} using {derivation_obj.__class__.__name__}")
         self.target_df = derivation_obj.derive(self.source_data, self.target_df, col_spec)
     

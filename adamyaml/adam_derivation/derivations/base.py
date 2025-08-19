@@ -140,26 +140,3 @@ class BaseDerivation(ABC):
             return df
 
 
-class DerivationFactory:
-    """Factory to create appropriate derivation class"""
-    
-    @staticmethod
-    def get_derivation(column_spec: dict[str, Any]) -> BaseDerivation:
-        """Get derivation class based on specification."""
-        derivation = column_spec.get("derivation", {})
-        
-        # Simple dispatch based on derivation keys
-        if "constant" in derivation:
-            from .constant import ConstantDerivation
-            return ConstantDerivation()
-        elif "function" in derivation:
-            from .custom import CustomDerivation
-            return CustomDerivation()
-        elif "aggregation" in derivation:
-            from .aggregation import AggregationDerivation
-            return AggregationDerivation()
-        elif "source" in derivation:
-            from .source import SourceDerivation
-            return SourceDerivation()
-        else:
-            raise ValueError(f"Unknown derivation type: {derivation}")

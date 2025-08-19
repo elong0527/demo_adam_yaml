@@ -27,8 +27,11 @@ Key methods:
 def build() -> pl.DataFrame:
     """Build the ADaM dataset"""
     
+def _get_derivation(col_spec: dict) -> BaseDerivation:
+    """Get appropriate derivation class based on specification"""
+    
 def _derive_column(col_spec: dict) -> None:
-    """Derive single column using factory pattern"""
+    """Derive single column and update target DataFrame"""
 ```
 
 ### 2. SDTMLoader (loaders/sdtm_loader.py)
@@ -60,12 +63,6 @@ def derive(source_data: dict[str, pl.DataFrame],
           column_spec: dict[str, Any]) -> pl.DataFrame:
     """Derive column and return updated dataframe"""
 ```
-
-### 4. DerivationFactory (derivations/base.py)
-Simple dispatch mechanism:
-- Examines derivation specification keys
-- Returns appropriate derivation class instance
-- No complex registration or plugin system
 
 ## Derivation Types
 
@@ -132,7 +129,8 @@ In Specification:
 2. Load source datasets with renaming
 3. Build base dataset from key variables
 4. For each column specification:
-   - Factory creates derivation instance
+   - Engine determines derivation type
+   - Creates appropriate derivation instance
    - Derivation processes and returns DataFrame
    - Target DataFrame updated with new column
 5. Return final DataFrame
@@ -145,6 +143,7 @@ In Specification:
 - **No separate compute/derive**: Single derive method
 - **No original vs renamed data**: Only renamed data used
 - **No complex joining logic**: Direct operations
+- **No DerivationFactory**: Dispatch logic integrated into engine
 
 ### Benefits
 - Easier to understand and maintain

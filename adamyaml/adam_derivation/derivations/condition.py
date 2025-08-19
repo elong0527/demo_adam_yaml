@@ -5,7 +5,7 @@ Conditional derivation with when/then/else logic
 from typing import Any
 import polars as pl
 import logging
-from .base import BaseDerivation, DerivationFactory
+from .base import BaseDerivation
 
 
 class ConditionalDerivation(BaseDerivation):
