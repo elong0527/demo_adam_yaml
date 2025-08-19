@@ -24,7 +24,7 @@ columns:
   - name: WEIGHT
     derivation:
       source: VS.VSORRES
-      filter: VS.TESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
+      filter: VS.VSTESTCD == "WEIGHT" & VS.VSDTC < DM.RFSTDTC
       aggregation: 
         function: closest
         target: DM.RFSTDTC
@@ -32,7 +32,7 @@ columns:
   - name: HEIGHT
     derivation:
       source: VS.VSORRES
-      filter: VS.TESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
+      filter: VS.VSTESTCD == "HEIGHT" & VS.VSDTC < DM.RFSTDTC
       aggregation: 
         function: closest
         target: DM.RFSTDTC
