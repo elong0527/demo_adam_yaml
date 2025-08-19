@@ -42,19 +42,13 @@ class AdamDerivation:
             for dep in key_deps
         }
         
-        # Load without renaming for key building
-        source_df = self.sdtm_loader.load_dataset(source_dataset, rename_columns=False)
+        # Use already loaded renamed data (key variables are preserved)
+        source_df = self.source_data[source_dataset]
         self.logger.info(f"Using source dataset {source_dataset}")
         
+        # Key columns are preserved without renaming, so use original names
         columns_to_select = list(key_columns_map.values())
         base_df = source_df.select(columns_to_select)
-        
-        rename_map = {source_col: key_var 
-                      for key_var, source_col in key_columns_map.items() 
-                      if source_col != key_var}
-        if rename_map:
-            base_df = base_df.rename(rename_map)
-            self.logger.info(f"Renamed columns: {rename_map}")
         
         # Check for duplicates
         n_rows = base_df.height
@@ -65,11 +59,6 @@ class AdamDerivation:
             self.logger.error(
                 f"ERROR: Found {n_duplicates} duplicate key combinations. "
                 f"Total: {n_rows}, Unique: {n_unique}"
-            )
-            self.logger.log_error(
-                column=", ".join(key_vars),
-                method="_build_keys",
-                error=f"Duplicate key combinations: {n_duplicates} duplicates"
             )
             
             duplicated = base_df.filter(
@@ -108,23 +97,17 @@ class AdamDerivation:
         """Build the ADaM dataset."""
         self.logger.info(f"Starting derivation for {self.spec.domain}")
         
-        # Load all source data once
+        # Load all source data once (with renaming, preserving key variables)
         self._load_source_data()
         self.logger.info(f"Loaded {len(self.source_data)} source datasets")
         
-        # Build base with key variables
-        key_vars = self.spec.key or []
-        if key_vars:
-            self.target_df = self._build_keys()
-            key_columns_derived = set(key_vars)
-        else:
-            key_columns_derived = set()
+        self.target_df = self._build_keys()
         
         # Derive each column
         for col_spec in self.spec.get_column_specs():
             col_name = col_spec["name"]
             
-            if col_name in key_columns_derived or col_spec.get("drop"):
+            if col_name in self.spec.key or col_spec.get("drop"):
                 continue
             
             try:
