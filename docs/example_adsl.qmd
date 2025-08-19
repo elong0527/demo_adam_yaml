@@ -24,7 +24,10 @@ sys.path.insert(0, os.path.abspath(".."))
 import polars as pl
 from adamyaml.adam_derivation import AdamDerivation
 from adamyaml.adam_spec import AdamSpec
-from reactable import Reactable, Column
+from reactable import Reactable, embed_css
+
+pl.Config.set_tbl_rows(20)
+embed_css()
 ```
 
 ## Load and Examine the Specification
@@ -57,7 +60,9 @@ for col in spec.columns:
         "Has Derivation": "Yes" if col.derivation else "No"
     })
 
-pl.DataFrame(columns_data)
+Reactable(
+    pl.DataFrame(columns_data)
+)
 ```
 
 ## Generate the Dataset
@@ -80,7 +85,7 @@ print(f"Columns: {', '.join(df.columns)}")
 Let's look at the first few records with an interactive table:
 
 ```{python}
-df.head()
+Reactable(df)
 ```
 
 ## Conclusion
