@@ -25,7 +25,6 @@ import polars as pl
 from adamyaml.adam_derivation import AdamDerivation
 from adamyaml.adam_spec import AdamSpec
 from reactable import Reactable, Column
-import json
 ```
 
 ## Load and Examine the Specification
@@ -58,26 +57,7 @@ for col in spec.columns:
         "Has Derivation": "Yes" if col.derivation else "No"
     })
 
-import polars as pl
-columns_df = pl.DataFrame(columns_data)
-
-# Create interactive table
-Reactable(
-    data=columns_df,
-    columns={
-        "Name": Column(name="Variable", min_width=100),
-        "Label": Column(name="Description", min_width=200),
-        "Type": Column(name="Data Type", min_width=80),
-        "Core": Column(name="Requirement", min_width=100),
-        "Has Derivation": Column(name="Derived?", min_width=80)
-    },
-    searchable=True,
-    pagination=True,
-    default_page_size=10,
-    striped=True,
-    highlight=True,
-    bordered=True
-)
+pl.DataFrame(columns_data)
 ```
 
 ## Generate the Dataset
@@ -100,56 +80,7 @@ print(f"Columns: {', '.join(df.columns)}")
 Let's look at the first few records with an interactive table:
 
 ```{python}
-# Get first 20 rows for display
-df_display = df.head(20)
-
-# Create interactive table for the data
-Reactable(
-    data=df_display,
-    searchable=True,
-    filterable=True,
-    pagination=True,
-    default_page_size=10,
-    striped=True,
-    highlight=True,
-    bordered=True,
-    resizable=True
-)
-```
-
-## Data Quality Summary
-
-Let's create a summary of data completeness:
-
-```{python}
-# Calculate completeness for each column
-completeness_data = []
-for col in df.columns:
-    non_null = df[col].drop_nulls().len()
-    total = df.height
-    completeness = (non_null / total) * 100
-    
-    completeness_data.append({
-        "Column": col,
-        "Non-Null": non_null,
-        "Total": total,
-        "Completeness": completeness
-    })
-
-# Display completeness table
-completeness_df = pl.DataFrame(completeness_data)
-Reactable(
-    data=completeness_df,
-    columns={
-        "Column": Column(name="Variable"),
-        "Non-Null": Column(name="Non-Null Count"),
-        "Total": Column(name="Total Records"),
-        "Completeness": Column(name="% Complete", format={"digits": 1})
-    },
-    striped=True,
-    highlight=True,
-    bordered=True
-)
+df.head()
 ```
 
 ## Conclusion
