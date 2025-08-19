@@ -4,6 +4,7 @@ Categorization derivation using cut-based rules
 
 from typing import Any
 import polars as pl
+import logging
 from .base import BaseDerivation
 
 
@@ -13,7 +14,7 @@ class CategorizationDerivation(BaseDerivation):
     def derive(self, 
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.DataFrame:
         """
         Apply categorization rules to create categorical variable
         
@@ -23,7 +24,7 @@ class CategorizationDerivation(BaseDerivation):
             column_spec: Column specification
         
         Returns:
-            Series with categorical values
+            Updated dataframe with categorical column
         """
         derivation = column_spec.get("derivation", {})
         source_str = derivation.get("source")
@@ -148,6 +149,11 @@ class CategorizationDerivation(BaseDerivation):
             result_df = result_df.select(result_expr.alias("result"))
             result = result_df["result"]
         
-        self.logger.info(f"Applied {len(cut_rules)} categorization rules")
+        logging.getLogger(__name__).info(f"Applied {len(cut_rules)} categorization rules")
         
-        return result
+        # Add to dataframe
+        col_name = column_spec["name"]
+        if target_df.height == 0:
+            return pl.DataFrame({col_name: result})
+        else:
+            return target_df.with_columns(result.alias(col_name))

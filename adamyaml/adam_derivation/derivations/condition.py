@@ -4,6 +4,7 @@ Conditional derivation with when/then/else logic
 
 from typing import Any
 import polars as pl
+import logging
 from .base import BaseDerivation, DerivationFactory
 
 
@@ -13,7 +14,7 @@ class ConditionalDerivation(BaseDerivation):
     def derive(self, 
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.DataFrame:
         """
         Apply conditional derivation rules
         
@@ -23,7 +24,7 @@ class ConditionalDerivation(BaseDerivation):
             column_spec: Column specification
         
         Returns:
-            Series with conditionally derived values
+            Updated dataframe with conditional column
         """
         derivation = column_spec.get("derivation", {})
         conditions = derivation.get("condition", [])
@@ -100,9 +101,14 @@ class ConditionalDerivation(BaseDerivation):
                     result = result_df["result"]
         
         assigned_count = result.drop_nulls().len()
-        self.logger.info(f"Applied {len(conditions)} conditions, {assigned_count} rows assigned")
+        logging.getLogger(__name__).info(f"Applied {len(conditions)} conditions, {assigned_count} rows assigned")
         
-        return result
+        # Add to dataframe
+        col_name = column_spec["name"]
+        if target_df.height == 0:
+            return pl.DataFrame({col_name: result})
+        else:
+            return target_df.with_columns(result.alias(col_name))
     
     def _build_condition_expr(self, expr_str: str, source_data: dict[str, pl.DataFrame], target_df: pl.DataFrame):
         """

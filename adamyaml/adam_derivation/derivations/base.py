@@ -9,26 +9,23 @@ import logging
 
 
 class BaseDerivation(ABC):
-    """Abstract base class for all derivation methods"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    """Base class for all derivation methods"""
     
     @abstractmethod
     def derive(self, 
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.DataFrame:
         """
-        Execute derivation for a single column
+        Derive column and return updated dataframe.
         
         Args:
-            source_data: Dictionary of source SDTM datasets
-            target_df: Current state of target ADaM dataset
-            column_spec: Column specification from YAML
+            source_data: Source datasets with renamed columns
+            target_df: Current target dataset
+            column_spec: Column specification
         
         Returns:
-            Series with derived values
+            Updated dataframe with new column
         """
         pass
     
@@ -37,21 +34,23 @@ class BaseDerivation(ABC):
                           source_data: dict[str, pl.DataFrame],
                           target_df: pl.DataFrame) -> tuple[pl.DataFrame, str]:
         """
-        Parse source string and return dataset and column
+        Parse source string and return dataset and column.
+        With renamed columns, the column name is already in DATASET.COLUMN format.
         
         Args:
             source_str: Source string (e.g., "DM.AGE" or "AGE")
-            source_data: Dictionary of source datasets
+            source_data: Dictionary of source datasets (with renamed columns)
             target_df: Target dataset being built
         
         Returns:
-            Tuple of (dataset DataFrame, column name)
+            Tuple of (dataset DataFrame, column name as it appears in the dataframe)
         """
         if "." in source_str:
-            dataset_name, column_name = source_str.split(".", 1)
+            dataset_name, _ = source_str.split(".", 1)
             if dataset_name not in source_data:
                 raise ValueError(f"Dataset {dataset_name} not loaded")
-            return source_data[dataset_name], column_name
+            # Return the full source_str as the column name since columns are already renamed
+            return source_data[dataset_name], source_str
         else:
             # Reference to column in target dataset
             return target_df, source_str
@@ -137,7 +136,7 @@ class BaseDerivation(ABC):
             return result
             
         except Exception as e:
-            self.logger.warning(f"Filter failed: {e}, returning unfiltered data")
+            logging.getLogger(__name__).warning(f"Filter failed: {e}, returning unfiltered data")
             return df
 
 
@@ -146,50 +145,21 @@ class DerivationFactory:
     
     @staticmethod
     def get_derivation(column_spec: dict[str, Any]) -> BaseDerivation:
-        """
-        Get appropriate derivation class based on column specification
-        
-        Args:
-            column_spec: Column specification from YAML
-        
-        Returns:
-            Instance of appropriate derivation class
-        """
+        """Get derivation class based on specification."""
         derivation = column_spec.get("derivation", {})
         
-        # Check for conditional derivation first
-        if "condition" in derivation:
-            from .condition import ConditionalDerivation
-            return ConditionalDerivation()
-        
-        # Check for constant
+        # Simple dispatch based on derivation keys
         if "constant" in derivation:
             from .constant import ConstantDerivation
             return ConstantDerivation()
-        
-        # Check for custom function
-        if "function" in derivation:
+        elif "function" in derivation:
             from .custom import CustomDerivation
             return CustomDerivation()
-        
-        # Check for categorization
-        if "cut" in derivation:
-            from .categorization import CategorizationDerivation
-            return CategorizationDerivation()
-        
-        # Check for source with aggregation
-        if "source" in derivation and "aggregation" in derivation:
+        elif "aggregation" in derivation:
             from .aggregation import AggregationDerivation
             return AggregationDerivation()
-        
-        # Check for source with mapping
-        if "source" in derivation and "mapping" in derivation:
+        elif "source" in derivation:
             from .source import SourceDerivation
             return SourceDerivation()
-        
-        # Default source derivation
-        if "source" in derivation:
-            from .source import SourceDerivation
-            return SourceDerivation()
-        
-        raise ValueError(f"No suitable derivation method found for: {derivation}")
+        else:
+            raise ValueError(f"Unknown derivation type: {derivation}")

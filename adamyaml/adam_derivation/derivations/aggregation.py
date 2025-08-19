@@ -4,6 +4,7 @@ Aggregation-based derivation for summarizing multiple records
 
 from typing import Any
 import polars as pl
+import logging
 from .base import BaseDerivation
 
 
@@ -11,9 +12,9 @@ class AggregationDerivation(BaseDerivation):
     """Derive values using aggregation functions"""
     
     def derive(self, 
-               source_data: dict[str, pl.DataFrame],
-               target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
+                source_data: dict[str, pl.DataFrame],
+                target_df: pl.DataFrame,
+                column_spec: dict[str, Any]) -> pl.DataFrame:
         """
         Apply aggregation to derive values
         
@@ -40,10 +41,10 @@ class AggregationDerivation(BaseDerivation):
         # Apply filter if specified
         filter_expr = derivation.get("filter", "")
         if filter_expr:
-            self.logger.debug(f"Applying filter: {filter_expr}")
-            self.logger.debug(f"Before filter: {source_df.height} records")
+            logging.getLogger(__name__).debug(f"Applying filter: {filter_expr}")
+            logging.getLogger(__name__).debug(f"Before filter: {source_df.height} records")
             source_df = self.apply_filter(source_df, filter_expr, source_data)
-            self.logger.debug(f"After filter: {source_df.height} records")
+            logging.getLogger(__name__).debug(f"After filter: {source_df.height} records")
         
         # Convert source column to numeric if it's string
         if source_col in source_df.columns and source_df[source_col].dtype == pl.Utf8:
@@ -165,6 +166,11 @@ class AggregationDerivation(BaseDerivation):
             result = result_df[source_col]
         
         non_null = result.drop_nulls().len()
-        self.logger.info(f"Applied {agg_function} aggregation, {non_null} non-null values")
+        logging.getLogger(__name__).info(f"Applied {agg_function} aggregation, {non_null} non-null values")
         
-        return result
+        # Add to dataframe
+        col_name = column_spec["name"]
+        if target_df.height == 0:
+            return pl.DataFrame({col_name: result})
+        else:
+            return target_df.with_columns(result.alias(col_name))

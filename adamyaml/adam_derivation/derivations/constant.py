@@ -13,35 +13,21 @@ class ConstantDerivation(BaseDerivation):
     def derive(self, 
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
-        """
-        Apply constant value to all records
+               column_spec: dict[str, Any]) -> pl.DataFrame:
+        """Add constant value column."""
+        col_name = column_spec["name"]
+        constant_value = column_spec["derivation"]["constant"]
         
-        Args:
-            source_data: Dictionary of source datasets (not used)
-            target_df: Current target dataset
-            column_spec: Column specification with 'constant' field
+        # Determine number of rows
+        n_rows = target_df.height if target_df.height > 0 else source_data.get("DM", pl.DataFrame()).height
         
-        Returns:
-            Series with constant value
-        """
-        derivation = column_spec.get("derivation", {})
-        constant_value = derivation.get("constant")
+        if n_rows == 0:
+            raise ValueError("Cannot determine number of rows")
         
-        if constant_value is None:
-            raise ValueError(f"No constant value specified for {column_spec.get('name')}")
+        # Add constant column
+        values = pl.Series([constant_value] * n_rows)
         
-        # Get the number of rows from target_df or use a default
         if target_df.height == 0:
-            # If target is empty, try to get length from DM dataset
-            if "DM" in source_data:
-                n_rows = source_data["DM"].height
-            else:
-                raise ValueError("Cannot determine number of rows for constant derivation")
+            return pl.DataFrame({col_name: values})
         else:
-            n_rows = target_df.height
-        
-        self.logger.info(f"Applying constant value '{constant_value}' to {n_rows} rows")
-        
-        # Create a series with the constant value
-        return pl.Series([constant_value] * n_rows)
+            return target_df.with_columns(values.alias(col_name))

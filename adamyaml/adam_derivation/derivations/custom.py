@@ -6,21 +6,18 @@ from typing import Any
 import polars as pl
 from .base import BaseDerivation
 import importlib
-import sys
+import importlib.util
+import logging
 from pathlib import Path
 
 
 class CustomDerivation(BaseDerivation):
     """Derive values using custom functions"""
     
-    def __init__(self):
-        super().__init__()
-        self._function_cache = {}
-    
     def derive(self, 
                source_data: dict[str, pl.DataFrame],
                target_df: pl.DataFrame,
-               column_spec: dict[str, Any]) -> pl.Series:
+               column_spec: dict[str, Any]) -> pl.DataFrame:
         """
         Apply custom function to derive values
         
@@ -54,7 +51,7 @@ class CustomDerivation(BaseDerivation):
                     if dataset_name in source_data:
                         kwargs[key] = source_data[dataset_name][col_name]
                     else:
-                        self.logger.warning(f"Dataset {dataset_name} not found for argument {key}")
+                        logging.getLogger(__name__).warning(f"Dataset {dataset_name} not found for argument {key}")
                 else:
                     # Use as literal value
                     kwargs[key] = value
@@ -67,62 +64,42 @@ class CustomDerivation(BaseDerivation):
             if not isinstance(result, pl.Series):
                 result = pl.Series(result)
             
-            self.logger.info(f"Applied custom function {function_name}")
+            logging.getLogger(__name__).info(f"Applied custom function {function_name}")
             
-            return result
+            # Add to dataframe
+            col_name = column_spec["name"]
+            if target_df.height == 0:
+                return pl.DataFrame({col_name: result})
+            else:
+                return target_df.with_columns(result.alias(col_name))
             
         except Exception as e:
-            self.logger.error(f"Custom function {function_name} failed: {e}")
-            # Return series of None values
-            if target_df.height > 0:
-                return pl.Series([None] * target_df.height)
-            elif "DM" in source_data:
-                return pl.Series([None] * source_data["DM"].height)
+            logging.getLogger(__name__).error(f"Custom function {function_name} failed: {e}")
+            # Return dataframe with None values
+            col_name = column_spec["name"]
+            n_rows = target_df.height if target_df.height > 0 else source_data.get("DM", pl.DataFrame()).height or 1
+            null_series = pl.Series([None] * n_rows)
+            
+            if target_df.height == 0:
+                return pl.DataFrame({col_name: null_series})
             else:
-                return pl.Series([None])
+                return target_df.with_columns(null_series.alias(col_name))
     
     def _get_custom_function(self, function_name: str):
-        """
-        Load custom function from custom_functions module
+        """Load custom function."""
+        # Built-in functions
+        if function_name == "get_bmi":
+            return self._builtin_bmi
         
-        Args:
-            function_name: Name of the function to load
+        # Try to import from functions folder
+        functions_path = Path(__file__).parent.parent / "functions" / f"{function_name}.py"
+        if functions_path.exists():
+            spec = importlib.util.spec_from_file_location(function_name, functions_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return getattr(module, function_name)
         
-        Returns:
-            Function object
-        """
-        if function_name in self._function_cache:
-            return self._function_cache[function_name]
-        
-        # Try to import from custom_functions module
-        try:
-            # Check if custom_functions.py exists in adam_derivation folder
-            custom_functions_path = Path(__file__).parent.parent / "custom_functions.py"
-            
-            if custom_functions_path.exists():
-                # Load the module
-                spec = importlib.util.spec_from_file_location("custom_functions", custom_functions_path)
-                custom_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(custom_module)
-                
-                # Get the function
-                if hasattr(custom_module, function_name):
-                    func = getattr(custom_module, function_name)
-                    self._function_cache[function_name] = func
-                    return func
-            
-            # If not in custom_functions, try built-in functions
-            if function_name == "get_bmi":
-                func = self._builtin_bmi
-                self._function_cache[function_name] = func
-                return func
-            
-            raise ValueError(f"Custom function {function_name} not found")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to load custom function {function_name}: {e}")
-            # Return a dummy function that returns None
-            return lambda **kwargs: None
+        raise ValueError(f"Function {function_name} not found")
     
     def _builtin_bmi(self, height: pl.Series, weight: pl.Series) -> pl.Series:
         """
