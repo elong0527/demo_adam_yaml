@@ -47,20 +47,23 @@ print(f"Key variables: {spec.key}")
 Let's create an interactive table showing the column specifications:
 
 ```{python}
-# Convert columns to a list of dictionaries for display
+# Convert columns to a polars dataframe for display
 columns_data = []
 for col in spec.columns:
     columns_data.append({
         "Name": col.name,
         "Label": col.label,
         "Type": col.type,
-        "Core": col.core,
+        "Core": col.core if col.core else "N/A",
         "Has Derivation": "Yes" if col.derivation else "No"
     })
 
+import polars as pl
+columns_df = pl.DataFrame(columns_data)
+
 # Create interactive table
 Reactable(
-    data=columns_data,
+    data=columns_df,
     columns={
         "Name": Column(name="Variable", min_width=100),
         "Label": Column(name="Description", min_width=200),
@@ -97,8 +100,8 @@ print(f"Columns: {', '.join(df.columns)}")
 Let's look at the first few records with an interactive table:
 
 ```{python}
-# Convert to dict for reactable display
-df_display = df.head(20).to_dicts()
+# Get first 20 rows for display
+df_display = df.head(20)
 
 # Create interactive table for the data
 Reactable(
@@ -134,8 +137,9 @@ for col in df.columns:
     })
 
 # Display completeness table
+completeness_df = pl.DataFrame(completeness_data)
 Reactable(
-    data=completeness_data,
+    data=completeness_df,
     columns={
         "Column": Column(name="Variable"),
         "Non-Null": Column(name="Non-Null Count"),
