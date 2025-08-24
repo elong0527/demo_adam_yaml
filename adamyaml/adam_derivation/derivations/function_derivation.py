@@ -69,19 +69,29 @@ class FunctionDerivation(BaseDerivation):
         
         Args:
             function_name: Can be:
+                - Short name: "get_bmi" (looked up in registry)
                 - Full path: "adamyaml.adam_derivation.functions.get_bmi.get_bmi"
                 - Module function: "numpy.abs", "polars.col"
-                - Local function: "get_bmi"
+                - Local function: "get_bmi" (fallback)
             
         Returns:
             Callable function object
         """
         
+        # First, try to resolve short names using the registry
+        if "." not in function_name:
+            try:
+                from ..functions import get_function_path
+                function_name = get_function_path(function_name)
+                logger.debug(f"Resolved '{function_name}' from registry")
+            except (ImportError, KeyError):
+                # Fall back to local function loading
+                return self._load_local_function(function_name)
+        
+        # Now load the function (either from registry or direct path)
         if "." in function_name:
-            # Module or full path function
             return self._load_module_function(function_name)
         else:
-            # Local function from functions.py or dedicated file
             return self._load_local_function(function_name)
     
     def _load_module_function(self, function_name: str):

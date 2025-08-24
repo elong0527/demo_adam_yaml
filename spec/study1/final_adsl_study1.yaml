@@ -113,7 +113,7 @@ columns:
   label: BMI (kg/m^2)
   core: org-required
   derivation:
-    function: adamyaml.adam_derivation.functions.get_bmi.get_bmi
+    function: get_bmi
     height: HEIGHT
     weight: WEIGHT
   validation:
