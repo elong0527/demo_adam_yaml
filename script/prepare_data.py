@@ -45,7 +45,7 @@ def download_xpt_file(url: str) -> pl.DataFrame:
             tmp_file.write(response.content)
             tmp_path = tmp_file.name
         
-        # Read XPT file with polars
+        # Read XPT file with pandas (which has SAS support) then convert to polars
         try:
             import pandas as pd
             # Use pandas to read SAS then convert to polars
@@ -58,6 +58,7 @@ def download_xpt_file(url: str) -> pl.DataFrame:
             df_pandas = df_pandas.replace('nan', '')
             
             df = pl.from_pandas(df_pandas)
+            
         finally:
             # Clean up temp file
             Path(tmp_path).unlink(missing_ok=True)
